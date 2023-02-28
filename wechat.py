@@ -93,7 +93,7 @@ class weChat():
         if not (group_name in self.conf.get('group_name_white_list') or 'ALL_GROUP' in self.conf.get(
                 'group_name_white_list')):
             return ""
-        if msg['MsgType']==49 and msg['FileName'] not in self.articles.index:
+        if msg['MsgType']==49 and msg['FileName'] not in self.articles.index and 'mp.weixin.qq.com' in msg['Url']:
             df=pd.DataFrame(data=[[self.dealWxUrl(msg['Url']),'']],index=[msg['FileName']],columns=['Url','Summary'])
             self.articles=self.articles.append(df)
             self.articles.to_csv(self.csvfile,index_label='FileName')
