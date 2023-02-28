@@ -10,18 +10,17 @@ class ChatGPTBot():
             # "driver_exec_path": "/usr/local/bin/chromedriver"
         }
         self.chatbot = Chatbot(config)
-        self.toDelete=None
 
     def reply(self, query, context=None):
+        logging.getLogger('log').debug(query)
         try:
-            if self.toDelete is not None:
-                self.chatbot.delete_conversation(self.toDelete)
-                self.toDelete=None
             user_cache = dict()
             for res in self.chatbot.ask(query):
                 user_cache=res
-                self.toDelete=res['conversation_id']
-            print(user_cache)
+                logging.getLogger('log').debug(res['message'])
+            if user_cache.get('conversation_id','')!='':
+                self.chatbot.delete_conversation(user_cache['conversation_id'])
+            logging.getLogger('log').debug(user_cache)
             return user_cache['message']
         except Exception as e:
             logging.exception(e)

@@ -87,9 +87,10 @@ class weChat():
             return
         log.debug(msg)
         group_name = msg['User'].get('NickName', None)
+        log.debug(group_name)
         if not group_name:
             return ""
-        if (group_name in self.conf.get('group_name_white_list') or 'ALL_GROUP' in self.conf.get(
+        if not (group_name in self.conf.get('group_name_white_list') or 'ALL_GROUP' in self.conf.get(
                 'group_name_white_list')):
             return ""
         if msg['MsgType']==49 and msg['FileName'] not in self.articles.index:
@@ -126,9 +127,6 @@ class weChat():
             if '--$$$#--' in query:
                 titleAndTxt = query.split('--$$$#--')
                 title, query = titleAndTxt[0], titleAndTxt[1]
-            if len(query)>3000:
-                self.send(self.conf.get("single_chat_reply_prefix") + '文章超过三千字，chatGPT不接', reply_user_id)
-                return
             context = dict()
             context['from_user_id'] = reply_user_id
             self.waiting = True
@@ -152,9 +150,6 @@ class weChat():
         if '--$$$#--' in query:
             titleAndTxt = query.split('--$$$#--')
             title, query = titleAndTxt[0], titleAndTxt[1]
-        if len(query) > 3000:
-            self.send('文章超过三千字，chatGPT不接', msg['User']['UserName'])
-            return
         context = dict()
         context['from_user_id'] = msg['ActualUserName']
         self.waiting=True
@@ -205,9 +200,13 @@ class weChat():
         res = requests.get(row['Url'])
         soup = BeautifulSoup(res.text, "html.parser")
         discription = re.sub(r'\\x[0-9a-fA-F]{2}', '', soup.find('meta', {'name': 'description'}).attrs['content'])
-        prompt=soup.find(id='js_content').text
+        prompt=soup.find(id='js_content').get_text(separator="\n")
         if len(prompt)==0:
             prompt = discription + prompt
-        log.info(len(prompt))
-        log.info(prompt)
-        return filename+'--$$$#--'+prompt
+        else:
+            prompt1=prompt[:2000].split('\n')[:-1]
+            prompt1.extend(prompt[-500:].split('\n')[1:])
+            prompt='\n'.join(list(set(prompt1)))
+        prompt=filename+'--$$$#--'+prompt.replace('\n\n','\n')+self.conf.get('end','')
+        log.debug(prompt)
+        return prompt
