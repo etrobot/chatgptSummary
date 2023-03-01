@@ -8,15 +8,13 @@ import json,re
 from itchat.content import *
 from concurrent.futures import ThreadPoolExecutor
 import requests
-import io
 from http.cookies import SimpleCookie
-import logging
 from chatgptBot import *
 
 import pandas as pd
 from bs4 import BeautifulSoup
 
-thead_pool = ThreadPoolExecutor(max_workers=8)
+thread_pool = ThreadPoolExecutor(max_workers=8)
 log = logging.getLogger('log')
 log.setLevel(logging.DEBUG)
 
@@ -34,7 +32,7 @@ def handler_group_msg(msg):
 
 class weChat():
     def __init__(self):
-        self.waiting=False
+        
         with open('config.json') as fr:
             self.conf = json.loads(fr.read())
         self.chatBot=ChatGPTBot(self.conf)
@@ -50,9 +48,6 @@ class weChat():
 
 
     def handle(self, msg):
-        if self.waiting:
-            log.info('waiting')
-            return
         log.debug(msg)
         from_user_id = msg['FromUserName']
         to_user_id = msg['ToUserName']              # 接收人id
@@ -64,13 +59,19 @@ class weChat():
             self.articles.to_csv(self.csvfile,index_label='FileName')
         match_prefix = self.check_prefix(content, self.conf.get('single_chat_prefix'))
         if from_user_id == other_user_id and match_prefix is not None:
-            filename=self.extractWxTitle(content)
+            prompt = content[len(match_prefix):]
+            if prompt=="McDonald's ":
+                self.chatBot.chatbot.delete_conversation(self.chatBot.chatbot.conversation_id)
+                self.chatBot.chatbot.conversation_id=None
+            filename = ''
             if '[Link]' in content or '[链接]' in content:
-                prompt=self.ripPost(filename)
+                filename = self.extractWxTitle(content)
+                prompt = content.split('\n- - - - - - - - - - - - - - -\n')[-1][len(match_prefix):]
+                query=self.ripPost(filename)
             else:
-                prompt=content[len(match_prefix):]
-            if prompt is not None:
-                thead_pool.submit(self._do_send, prompt, from_user_id)
+                query=content[len(match_prefix):]
+            if query is not None:
+                thread_pool.submit(self._do_send, query,from_user_id,prompt,filename)
 
         elif to_user_id == other_user_id and match_prefix:
             # 自己给好友发送消息
@@ -82,91 +83,71 @@ class weChat():
 
 
     def handle_group(self, msg):
-        if self.waiting:
-            log.info('waiting')
-            return
-        log.debug(msg)
         group_name = msg['User'].get('NickName', None)
-        log.debug(group_name)
         if not group_name:
             return ""
         if not (group_name in self.conf.get('group_name_white_list') or 'ALL_GROUP' in self.conf.get(
                 'group_name_white_list')):
             return ""
+        log.debug(group_name)
+        log.debug(msg)
         if msg['MsgType']==49 and msg['FileName'] not in self.articles.index and 'mp.weixin.qq.com' in msg['Url']:
             df=pd.DataFrame(data=[[self.dealWxUrl(msg['Url']),'']],index=[msg['FileName']],columns=['Url','Summary'])
             self.articles=self.articles.append(df)
             self.articles.to_csv(self.csvfile,index_label='FileName')
-        origin_content = msg['Content']
+        if not msg['IsAt']:
+            return
         content = msg['Content']
-        content_list = content.split(' ', 1)
-        context_special_list = content.split('\u2005', 1)
-        if len(context_special_list) == 2:
-            content = context_special_list[1]
-        elif len(content_list) == 2:
-            content = content_list[1]
-
-        match_prefix = msg['IsAt'] or self.check_prefix(origin_content, self.conf.get('group_chat_prefix'))
-        if match_prefix is not None:
-            filename=self.extractWxTitle(content)
-            log.info(filename)
-            prompt=None
-            if '[Link]' in content or '[链接]' in content:
-                prompt=self.ripPost(filename)
-            if prompt is not None:
-                thead_pool.submit(self._do_send_group,prompt, msg)
+        if not('[Link]' in content or '[链接]' in content) :
+            return
+        prompt = content.split('\n- - - - - - - - - - - - - - -\n')[-1][:-len(msg['User']['Self']['NickName'])]
+        log.debug(prompt)
+        filename = self.extractWxTitle(content)
+        query=self.ripPost(filename)
+        if query is not None:
+            thread_pool.submit(self._do_send_group,query,msg,filename,prompt)
 
     def send(self, msg, receiver):
         logging.info('[WX] sendMsg={}, receiver={}'.format(msg, receiver))
         itchat.send(msg, toUserName=receiver)
 
-    def _do_send(self, query, reply_user_id):
+    def _do_send(self, query,reply_user_id,prompt,title):
         try:
             if not query:
                 return
-            if '--$$$#--' in query:
-                titleAndTxt = query.split('--$$$#--')
-                title, query = titleAndTxt[0], titleAndTxt[1]
             context = dict()
             context['from_user_id'] = reply_user_id
             self.waiting = True
-            prompt=query
-            if '--$$$#--' in query:
-                prompt = self.conf.get("character_desc", "") + ' ' + query
-            reply_text = self.chatBot.reply(prompt,context)
+            if title!='':
+                query = self.conf.get("character_desc", "") + prompt + '\n『%s\n』'%query+'\nTL;DR;'
+            reply_text = self.chatBot.reply(query,context)
             if reply_text:
-                if '--$$$#--' in query:
+                if title!='':
                     self.articles.at[title,'Summary']=reply_text
                     self.articles.to_csv(self.csvfile,index_label='FileName')
                 self.send(self.conf.get("single_chat_reply_prefix") + reply_text, reply_user_id)
-                self.waiting=False
+                
         except Exception as e:
             logging.exception(e)
             self.waiting = False
 
-    def _do_send_group(self, query, msg):
+    def _do_send_group(self,query,msg,title,prompt):
         if not query:
             return
-        if '--$$$#--' in query:
-            titleAndTxt = query.split('--$$$#--')
-            title, query = titleAndTxt[0], titleAndTxt[1]
         context = dict()
         context['from_user_id'] = msg['ActualUserName']
-        self.waiting=True
-        prompt = self.conf.get("character_desc", "") + ' ' + query
-        reply_text = self.chatBot.reply(prompt, context)
+        query = self.conf.get("character_desc", "") + prompt + '\n『%s\n』'%query+'\nTL;DR;'
+        reply_text = self.chatBot.reply(query, context)
         reply_text = '@' + msg['ActualNickName'] + ' ' + reply_text.strip()
         if reply_text:
             self.articles.at[title, 'Summary'] = reply_text
             self.articles.to_csv(self.csvfile, index_label='FileName')
             self.send(reply_text, msg['User']['UserName'])
-        self.waiting=False
+        
 
     def check_prefix(self, content, prefix_list):
         for prefix in prefix_list:
             if prefix in content:
-                return prefix
-            if content.startswith(prefix):
                 return prefix
         return None
 
@@ -183,30 +164,28 @@ class weChat():
         return realurl
 
     def extractWxTitle(self,txt):
-        log.debug(txt)
         pattern = r'\[Link\]\s+(.*?)"\n- - - - - - - - - - - - - - -\n'
         if '[链接]' in txt:
             pattern = r'\[链接\]+(.*?)」\n- - - - - - - - - - - - - - -\n'
         match = re.search(pattern, txt)
         if match:
-            log.debug(match.group)
+            log.debug(match.group(1))
             return match.group(1)
 
     def ripPost(self,filename):
         row=self.articles.loc[filename]
-        log.debug(row)
         if row['Summary']!='':
             return row['Summary']
         res = requests.get(row['Url'])
         soup = BeautifulSoup(res.text, "html.parser")
-        discription = re.sub(r'\\x[0-9a-fA-F]{2}', '', soup.find('meta', {'name': 'description'}).attrs['content'])
-        prompt=soup.find(id='js_content').get_text(separator="\n")
-        if len(prompt)==0:
-            prompt = discription + prompt
+        query=soup.find(id='js_content').get_text(separator="\n")
+        if len(query)==0:
+            discription = re.sub(r'\\x[0-9a-fA-F]{2}', '', soup.find('meta', {'name': 'description'}).attrs['content'])
+            query = discription + query
         else:
-            prompt1=prompt[:2000].split('\n')[:-1]
-            prompt1.extend(prompt[-500:].split('\n')[1:])
-            prompt='\n'.join(list(set(prompt1)))
-        prompt=filename+'--$$$#--'+prompt.replace('\n\n','\n')+self.conf.get('end','')
-        log.debug(prompt)
-        return prompt
+            query1 = query[:self.conf.get('headLen', 1500)].split('\n')[:-1]
+            query1.extend(query[-self.conf.get('tailLen', 1000):].split('\n')[1:])
+            query = list(set(query1))
+            query.sort(key=query1.index)
+            query = '\n'.join(query)
+        return query

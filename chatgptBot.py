@@ -1,27 +1,56 @@
+import json
 import time
 from revChatGPT.V1 import Chatbot
 import logging
 
-# ChatGPT web接口 (暂时不可用)
+user_session = dict()
+last_session_refresh = time.time()
+
+
 class ChatGPTBot():
     def __init__(self,conf:dict):
         config = {
             "session_token": conf.get("__Secure-next-auth.session-token"),
-            # "driver_exec_path": "/usr/local/bin/chromedriver"
+            "driver_exec_path": "/usr/local/bin/chromedriver"
         }
         self.chatbot = Chatbot(config)
 
     def reply(self, query, context=None):
-        logging.getLogger('log').debug(query)
+
+        from_user_id = context['from_user_id']
+        logging.getLogger('log').info("[GPT]query={}, user_id={}, session={}".format(query, from_user_id, user_session))
+
+        now = time.time()
+        global last_session_refresh
+        if now - last_session_refresh > 60 * 8:
+            logging.getLogger('log').info('[GPT]session refresh, now={}, last={}'.format(now, last_session_refresh))
+            self.chatbot.refresh_session()
+        last_session_refresh = now
+
+        if from_user_id in user_session:
+            if time.time() - user_session[from_user_id]['last_reply_time'] < 60 * 5:
+                self.chatbot.conversation_id = user_session[from_user_id]['conversation_id']
+                self.chatbot.parent_id = user_session[from_user_id]['parent_id']
+            else:
+                self.chatbot.reset_chat()
+        else:
+            self.chatbot.reset_chat()
+
+        logging.getLogger('log').info("[GPT]convId={}, parentId={}".format(self.chatbot.conversation_id, self.chatbot.parent_id))
+
         try:
             user_cache = dict()
             for res in self.chatbot.ask(query):
                 user_cache=res
-                logging.getLogger('log').debug(res['message'])
-            if user_cache.get('conversation_id','')!='':
-                self.chatbot.delete_conversation(user_cache['conversation_id'])
-            logging.getLogger('log').debug(user_cache)
-            return user_cache['message']
+                reply_rows=res['message'].split('\n')
+                if len(reply_rows)>1 and res['message'].endswith('\n') and reply_rows[-2]!='':
+                    logging.getLogger('log').debug(reply_rows[-2])
+            logging.getLogger('log').info("[GPT]userId={}, res={}".format(from_user_id, res))
+            user_cache['last_reply_time'] = time.time()
+            user_session[from_user_id] = user_cache
+            with open('user_cache.json', 'w', encoding='utf-8') as f:
+                json.dump(user_cache, f)
+            return res['message']
         except Exception as e:
-            logging.exception(e)
+            logging.getLogger('log').exception(e)
             return None

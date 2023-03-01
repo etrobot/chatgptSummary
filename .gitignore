@@ -132,3 +132,4 @@ dmypy.json
 config.json
 QR.png
 itchat.pkl
+user_cache.json
