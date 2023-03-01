@@ -12,7 +12,7 @@ last_session_refresh = time.time()
 class ChatGPTBot():
     def __init__(self,conf:dict):
         vikaUrl = 'https://api.vika.cn/fusion/v1/datasheets/dstMiuU9zzihy1LzFX/records?viewId=viwoAJhnS2NMT&fieldKey=name'
-        vikaCache = json.loads(requests.get(vikaUrl, headers={'Authorization': conf.get("vika.cn")}).text)['data']['records']
+        vikaCache = json.loads(requests.get(vikaUrl, headers={'Authorization': conf.get("sstoken")}).text)['data']['records']
         config = {
             "session_token":[x['fields']['value'] for x in vikaCache if x['recordId']=='recoeXAy2oY3E'][0],
             "driver_exec_path": "/usr/local/bin/chromedriver"
