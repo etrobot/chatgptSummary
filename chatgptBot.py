@@ -1,5 +1,7 @@
 import json
 import time
+
+import requests
 from revChatGPT.V1 import Chatbot
 import logging
 
@@ -9,8 +11,10 @@ last_session_refresh = time.time()
 
 class ChatGPTBot():
     def __init__(self,conf:dict):
+        vikaUrl = 'https://api.vika.cn/fusion/v1/datasheets/dstMiuU9zzihy1LzFX/records?viewId=viwoAJhnS2NMT&fieldKey=name'
+        vikaCache = json.loads(requests.get(vikaUrl, headers={'Authorization': conf.get("vika.cn")}).text)['data']['records']
         config = {
-            "session_token": conf.get("__Secure-next-auth.session-token"),
+            "session_token":[x['fields']['value'] for x in vikaCache if x['recordId']=='recoeXAy2oY3E'][0],
             "driver_exec_path": "/usr/local/bin/chromedriver"
         }
         self.chatbot = Chatbot(config)
@@ -19,13 +23,6 @@ class ChatGPTBot():
 
         from_user_id = context['from_user_id']
         logging.getLogger('log').info("[GPT]query={}, user_id={}, session={}".format(query, from_user_id, user_session))
-
-        now = time.time()
-        global last_session_refresh
-        if now - last_session_refresh > 60 * 8:
-            logging.getLogger('log').info('[GPT]session refresh, now={}, last={}'.format(now, last_session_refresh))
-            self.chatbot.refresh_session()
-        last_session_refresh = now
 
         if from_user_id in user_session:
             if time.time() - user_session[from_user_id]['last_reply_time'] < 60 * 5:
@@ -43,12 +40,12 @@ class ChatGPTBot():
             for res in self.chatbot.ask(query):
                 user_cache=res
                 reply_rows=res['message'].split('\n')
-                if len(reply_rows)>1 and res['message'].endswith('\n') and reply_rows[-2]!='':
+                if len(reply_rows)>1 and res['message'].endswith('\n'):
                     logging.getLogger('log').debug(reply_rows[-2])
             logging.getLogger('log').info("[GPT]userId={}, res={}".format(from_user_id, res))
             user_cache['last_reply_time'] = time.time()
             user_session[from_user_id] = user_cache
-            with open('user_cache.json', 'w', encoding='utf-8') as f:
+            with open('./user_cache.json', 'w', encoding='utf-8') as f:
                 json.dump(user_cache, f)
             return res['message']
         except Exception as e:

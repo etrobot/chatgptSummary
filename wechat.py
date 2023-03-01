@@ -53,6 +53,8 @@ class weChat():
         to_user_id = msg['ToUserName']              # 接收人id
         other_user_id = msg['User']['UserName']     # 对手方id
         content = msg['Text']
+        if content == "McDonald's ":
+            self.chatBot.chatbot.reset_chat()
         if msg['MsgType']==49 and msg['FileName'] not in self.articles.index:
             df=pd.DataFrame(data=[[msg['Url'],'']],index=[msg['FileName']],columns=['Url','Summary'])
             self.articles=self.articles.append(df)
@@ -60,9 +62,6 @@ class weChat():
         match_prefix = self.check_prefix(content, self.conf.get('single_chat_prefix'))
         if from_user_id == other_user_id and match_prefix is not None:
             prompt = content[len(match_prefix):]
-            if prompt=="McDonald's ":
-                self.chatBot.chatbot.delete_conversation(self.chatBot.chatbot.conversation_id)
-                self.chatBot.chatbot.conversation_id=None
             filename = ''
             if '[Link]' in content or '[链接]' in content:
                 filename = self.extractWxTitle(content)
