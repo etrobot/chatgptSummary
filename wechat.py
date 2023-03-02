@@ -99,7 +99,8 @@ class weChat():
         content = msg['Content']
         if not('[Link]' in content or '[链接]' in content) :
             return
-        prompt = content.split('\n- - - - - - - - - - - - - - -\n')[-1][:-len(msg['User']['Self']['NickName'])]
+        prompt = content.split('\n- - - - - - - - - - - - - - -\n')[-1][len(msg['User']['Self']['NickName'])+1:]
+        log.debug(msg['User']['Self']['NickName'])
         log.debug(prompt)
         filename = self.extractWxTitle(content)
         query=self.ripPost(filename)
