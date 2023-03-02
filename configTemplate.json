@@ -2,7 +2,6 @@
    "sstoken": "",
   "single_chat_prefix": ["bot", "@NickName"],
   "single_chat_reply_prefix": "[bot] ",
-  "group_chat_prefix": ["@NickName"],
   "group_name_white_list": ["AI 应用研讨群"],
   "conversation_max_tokens": 1000,
   "headLen": 1500,

@@ -40,14 +40,14 @@ class ChatGPTBot():
             for res in self.chatbot.ask(query):
                 user_cache=res
                 reply_rows=res['message'].split('\n')
-                if len(reply_rows)>1 and res['message'].endswith('\n'):
+                if res['message'].endswith('\n') or res['message'].endswith('\n\n'):
                     logging.getLogger('log').debug(reply_rows[-2])
             logging.getLogger('log').info("[GPT]userId={}, res={}".format(from_user_id, res))
             user_cache['last_reply_time'] = time.time()
             user_session[from_user_id] = user_cache
-            with open('./user_cache.json', 'w', encoding='utf-8') as f:
-                json.dump(user_cache, f)
-            return res['message']
+            with open('./user_session.json', 'w', encoding='utf-8') as f:
+                json.dump(user_session, f)
+            return '[ChatGPT]'+res['message']
         except Exception as e:
             logging.getLogger('log').exception(e)
             return None

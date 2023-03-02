@@ -7,7 +7,6 @@ import itchat
 import json,re
 from itchat.content import *
 from concurrent.futures import ThreadPoolExecutor
-import requests
 from http.cookies import SimpleCookie
 from chatgptBot import *
 
@@ -60,13 +59,17 @@ class weChat():
             self.articles=self.articles.append(df)
             self.articles.to_csv(self.csvfile,index_label='FileName')
         match_prefix = self.check_prefix(content, self.conf.get('single_chat_prefix'))
+        quote='\n- - - - - - - - - - - - - - -\n'
         if from_user_id == other_user_id and match_prefix is not None:
             prompt = content[len(match_prefix):]
             filename = ''
             if '[Link]' in content or '[链接]' in content:
                 filename = self.extractWxTitle(content)
-                prompt = content.split('\n- - - - - - - - - - - - - - -\n')[-1][len(match_prefix):]
+                prompt = content.split(quote)[-1][len(match_prefix):]
                 query=self.ripPost(filename)
+            elif quote in content:
+                query=content.split(quote)
+                query=query[1][len(match_prefix):]+' '+query[0]
             else:
                 query=content[len(match_prefix):]
             if query is not None:
@@ -90,22 +93,23 @@ class weChat():
             return ""
         log.debug(group_name)
         log.debug(msg)
-        if msg['MsgType']==49 and msg['FileName'] not in self.articles.index and 'mp.weixin.qq.com' in msg['Url']:
+        if msg['MsgType']==49 and msg['FileName'] not in self.articles.index:
             df=pd.DataFrame(data=[[self.dealWxUrl(msg['Url']),'']],index=[msg['FileName']],columns=['Url','Summary'])
             self.articles=self.articles.append(df)
             self.articles.to_csv(self.csvfile,index_label='FileName')
-        if not msg['IsAt']:
             return
-        content = msg['Content']
-        if not('[Link]' in content or '[链接]' in content) :
+        quote = '\n- - - - - - - - - - - - - - -\n'
+        if not msg['IsAt'] or not quote in msg['Content']:
             return
-        prompt = content.split('\n- - - - - - - - - - - - - - -\n')[-1][len(msg['User']['Self']['NickName'])+1:]
-        log.debug(msg['User']['Self']['NickName'])
-        log.debug(prompt)
-        filename = self.extractWxTitle(content)
-        query=self.ripPost(filename)
+        content = msg['Content'].split(quote)
+        prompt = content[-1][len(msg['User']['Self']['DisplayName'])+1:]
+        query = content[0]
+        title=''
+        if '[Link]' in msg['Content'] or '[链接]' in msg['Content']:
+            title = self.extractWxTitle(msg['Content'])
+            query=self.ripPost(title)
         if query is not None:
-            thread_pool.submit(self._do_send_group,query,msg,filename,prompt)
+            thread_pool.submit(self._do_send_group,query,msg,title,prompt)
 
     def send(self, msg, receiver):
         logging.info('[WX] sendMsg={}, receiver={}'.format(msg, receiver))
@@ -134,14 +138,19 @@ class weChat():
     def _do_send_group(self,query,msg,title,prompt):
         if not query:
             return
+        if title !='' and title in self.articles.index and self.articles.loc[title]['Summary'] != '' and prompt=='':
+            query = self.articles.loc[title]['Summary'].split('[ChatGPT]')[-1]
+            self.send(query, msg['User']['UserName'])
+            return
         context = dict()
         context['from_user_id'] = msg['ActualUserName']
         query = self.conf.get("character_desc", "") + prompt + '\n『%s\n』'%query+'\nTL;DR;'
         reply_text = self.chatBot.reply(query, context)
         reply_text = '@' + msg['ActualNickName'] + ' ' + reply_text.strip()
         if reply_text:
-            self.articles.at[title, 'Summary'] = reply_text
-            self.articles.to_csv(self.csvfile, index_label='FileName')
+            if title != '':
+                self.articles.at[title, 'Summary'] = reply_text
+                self.articles.to_csv(self.csvfile, index_label='FileName')
             self.send(reply_text, msg['User']['UserName'])
         
 
@@ -152,6 +161,8 @@ class weChat():
         return None
 
     def dealWxUrl(self,rawurl:str):
+        if 'mp.weixin.qq.com' not in rawurl:
+            return rawurl
         cookie = SimpleCookie()
         cookie.load(rawurl.split('://')[1][len('mp.weixin.qq.com/s?__'):].replace('&amp', ''))
         cookies = {k: v.value for k, v in cookie.items()}
@@ -174,18 +185,22 @@ class weChat():
 
     def ripPost(self,filename):
         row=self.articles.loc[filename]
-        if row['Summary']!='':
-            return row['Summary']
         res = requests.get(row['Url'])
         soup = BeautifulSoup(res.text, "html.parser")
-        query=soup.find(id='js_content').get_text(separator="\n")
-        if len(query)==0:
-            discription = re.sub(r'\\x[0-9a-fA-F]{2}', '', soup.find('meta', {'name': 'description'}).attrs['content'])
-            query = discription + query
-        else:
-            query1 = query[:self.conf.get('headLen', 1500)].split('\n')[:-1]
-            query1.extend(query[-self.conf.get('tailLen', 1000):].split('\n')[1:])
+        for s in soup(['script', 'style']):
+            s.decompose()
+        query=soup.get_text(separator="\n")
+        if 'mp.weixin.qq.com' in row['Url']:
+            query1=[x.get_text() for x in soup.find_all('section')]
             query = list(set(query1))
             query.sort(key=query1.index)
             query = '\n'.join(query)
-        return query
+            if len(query)==0:
+                query = re.sub(r'\\x[0-9a-fA-F]{2}', '', soup.find('meta', {'name': 'description'}).attrs['content'])
+        query1 = query[:self.conf.get('headLen', 1500)].split('\n')[:-1]
+        query1.extend(query[-self.conf.get('tailLen', 1000):].split('\n')[1:])
+        query1=[x.strip() for x in query1]
+        query = list(set(query1))
+        query.sort(key=query1.index)
+        query = '\n'.join(query)
+        return query.replace('\n\n','\n')
