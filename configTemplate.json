@@ -1,10 +1,11 @@
 {
-   "sstoken": "",
-  "single_chat_prefix": ["bot", "@NickName"],
-  "single_chat_reply_prefix": "[bot] ",
-  "group_name_white_list": ["AI 应用研讨群"],
+  "sstoken":"" ,
+  "proxy":"http://127.0.0.1:7890",
+  "single_chat_prefix": ["Bot", "@Vega"],
+  "single_chat_reply_prefix": "[ChatGPT] ",
+  "group_name_white_list": ["AI 应用研讨群","猴塞雷666","产品小分队"],
   "conversation_max_tokens": 1000,
-  "headLen": 1500,
-  "tailLen": 1000,
+  "headLen": 1000,
+  "tailLen": 1500,
   "character_desc": ""
 }

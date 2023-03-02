@@ -15,8 +15,9 @@ class ChatGPTBot():
         vikaCache = json.loads(requests.get(vikaUrl, headers={'Authorization': conf.get("sstoken")}).text)['data']['records']
         config = {
             "session_token":[x['fields']['value'] for x in vikaCache if x['recordId']=='recoeXAy2oY3E'][0],
-            "driver_exec_path": "/usr/local/bin/chromedriver"
         }
+        if conf.get('proxy'):
+            config['proxy']=conf.get('proxy')
         self.chatbot = Chatbot(config)
 
     def reply(self, query, context=None):

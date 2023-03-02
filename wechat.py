@@ -197,8 +197,8 @@ class weChat():
             query = '\n'.join(query)
             if len(query)==0:
                 query = re.sub(r'\\x[0-9a-fA-F]{2}', '', soup.find('meta', {'name': 'description'}).attrs['content'])
-        query1 = query[:self.conf.get('headLen', 1500)].split('\n')[:-1]
-        query1.extend(query[-self.conf.get('tailLen', 1000):].split('\n')[1:])
+        query1 = query[:self.conf.get('headLen', 1000)].split('\n')[:-1]
+        query1.extend(query[-self.conf.get('tailLen', 1500):].split('\n')[1:])
         query1=[x.strip() for x in query1]
         query = list(set(query1))
         query.sort(key=query1.index)
