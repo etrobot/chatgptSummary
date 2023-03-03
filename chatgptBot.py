@@ -48,7 +48,7 @@ class ChatGPTBot():
             user_session[from_user_id] = user_cache
             with open('./user_session.json', 'w', encoding='utf-8') as f:
                 json.dump(user_session, f)
-            return '[ChatGPT]'+res['message']
+            return res['message']
         except Exception as e:
             logging.getLogger('log').exception(e)
             return None

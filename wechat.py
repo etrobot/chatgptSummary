@@ -3,6 +3,8 @@
 """
 wechat channel
 """
+import string
+
 import itchat
 import json,re
 from itchat.content import *
@@ -103,7 +105,7 @@ class weChat():
             return
         content = msg['Content'].split(quote)
         prompt = content[-1][len(msg['User']['Self']['DisplayName'])+1:]
-        query = content[0]
+        query = content[0][len(msg['ActualNickName'])+1:]
         title=''
         if '[Link]' in msg['Content'] or '[链接]' in msg['Content']:
             title = self.extractWxTitle(msg['Content'])
@@ -123,7 +125,9 @@ class weChat():
             context['from_user_id'] = reply_user_id
             self.waiting = True
             if title!='':
-                query = self.conf.get("character_desc", "") + prompt + '\n『%s\n』'%query+'\nTL;DR;'
+                query = self.conf.get("character_desc", "") + prompt + '\n『%s\n』'%query
+            if len(prompt)<4 or len(query)>2000:
+                query = query +'\nTL;DR;用中文回复我。'
             reply_text = self.chatBot.reply(query,context)
             if reply_text:
                 if title!='':
@@ -144,7 +148,9 @@ class weChat():
             return
         context = dict()
         context['from_user_id'] = msg['ActualUserName']
-        query = self.conf.get("character_desc", "") + prompt + '\n『%s\n』'%query+'\nTL;DR;'
+        query = self.conf.get("character_desc", "") + prompt + '\n『%s\n』'%query
+        if len(prompt) < 4 or len(query) > 2000:
+            query = query + '\nTL;DR;用中文回复我。'
         reply_text = self.chatBot.reply(query, context)
         reply_text = '@' + msg['ActualNickName'] + ' ' + reply_text.strip()
         if reply_text:
@@ -189,18 +195,43 @@ class weChat():
         soup = BeautifulSoup(res.text, "html.parser")
         for s in soup(['script', 'style']):
             s.decompose()
-        query=soup.get_text(separator="\n")
+        queryText=soup.get_text(separator="\n")
+        query = queryText.split('\n')
+
         if 'mp.weixin.qq.com' in row['Url']:
-            query1=[x.get_text() for x in soup.find_all('section')]
+            query1 = [x.get_text() for x in soup.find_all('section')]
+            query2 = [x.get_text() for x in soup.find_all('p')]
+            if len(query2) > len(query1):
+                query1 = query2
             query = list(set(query1))
             query.sort(key=query1.index)
-            query = '\n'.join(query)
-            if len(query)==0:
-                query = re.sub(r'\\x[0-9a-fA-F]{2}', '', soup.find('meta', {'name': 'description'}).attrs['content'])
-        query1 = query[:self.conf.get('headLen', 1000)].split('\n')[:-1]
-        query1.extend(query[-self.conf.get('tailLen', 1500):].split('\n')[1:])
-        query1=[x.strip() for x in query1]
+            if len('\n'.join(query))==0:
+                queryText = re.sub(r'\\x[0-9a-fA-F]{2}', '',
+                                   soup.find('meta', {'name': 'description'}).attrs['content'])
+            else:
+                queryText = '\n'.join(query)
+
+        if len(queryText)<2500:
+            return queryText
+
+        def checkIndex(text: str):
+            if len(text) < 4:
+                return False
+            startString = '一,二,三,四,五,六,七,八,九,首先,其次,再次,然后,最后'
+            if text[0] in startString or text[:2] in startString:
+                return True
+            elif text[0].isdigit() and text[1] in string.punctuation:
+                return True
+            else:
+                return False
+
+        bullets = [x for x in query if len(x) > 2 and checkIndex(x)]
+        bulletsLen = len('\n'.join(bullets))
+        query1 = queryText[:1500 - int(bulletsLen / 2)].split('\n')[:-1]
+        query1.extend(bullets)
+        query1.extend(queryText[-1500 + int(bulletsLen / 2):].split('\n')[1:])
+        query1 = [x.strip() for x in query1 if len(x.strip()) > 2]
         query = list(set(query1))
         query.sort(key=query1.index)
-        query = '\n'.join(query)
-        return query.replace('\n\n','\n')
+        queryText='\n'.join(query)
+        return queryText.replace('\n\n','\n')
