@@ -38,7 +38,7 @@ class weChat():
             self.conf = json.loads(fr.read())
         self.chatBot=ChatGPTBot(self.conf)
         self.csvfile='./articles.csv'
-        self.articles=pd.read_csv(self.csvfile,index_col='FileName',keep_default_na=False)
+        self.posts=pd.read_csv(self.csvfile,index_col='FileName',keep_default_na=False)
         pass
 
     def startup(self):
@@ -56,10 +56,10 @@ class weChat():
         content = msg['Text']
         if content == "McDonald's ":
             self.chatBot.chatbot.reset_chat()
-        if msg['MsgType']==49 and msg['FileName'] not in self.articles.index:
+        if msg['MsgType']==49 and msg['FileName'] not in self.posts.index:
             df=pd.DataFrame(data=[[msg['Url'],'']],index=[msg['FileName']],columns=['Url','Summary'])
-            self.articles=self.articles.append(df)
-            self.articles.to_csv(self.csvfile,index_label='FileName')
+            self.posts=self.posts.append(df)
+            self.posts.to_csv(self.csvfile,index_label='FileName')
         match_prefix = self.check_prefix(content, self.conf.get('single_chat_prefix'))
         quote='\n- - - - - - - - - - - - - - -\n'
         if from_user_id == other_user_id and match_prefix is not None:
@@ -82,8 +82,8 @@ class weChat():
             str_list = content.split(match_prefix, 1)
             if len(str_list) == 2:
                 content = str_list[1].strip()
-                self.articles.at[self.extractWxTitle(content), 'Summary'] = content
-                self.articles.to_csv(self.csvfile,index_label='FileName')
+                self.posts.at[self.extractWxTitle(content), 'Summary'] = content
+                self.posts.to_csv(self.csvfile,index_label='FileName')
 
 
     def handle_group(self, msg):
@@ -95,11 +95,16 @@ class weChat():
             return ""
         log.debug(group_name)
         log.debug(msg)
-        if msg['MsgType']==49 and msg['FileName'] not in self.articles.index:
+        if msg['MsgType']==49 and msg['FileName'] not in self.posts.index:
             df=pd.DataFrame(data=[[self.dealWxUrl(msg['Url']),'']],index=[msg['FileName']],columns=['Url','Summary'])
-            self.articles=self.articles.append(df)
-            self.articles.to_csv(self.csvfile,index_label='FileName')
+            self.posts=self.posts.append(df)
+            self.posts.to_csv(self.csvfile,index_label='FileName')
             return
+        if '[Message cannot be displayed]' in msg['Content']:
+            query=self.dealText(self.ripBili(self.posts[self.posts['Url'].str.contains('23.tv')]['Url'].iloc[-1]))
+            thread_pool.submit(self._do_send_group, query, msg, msg['FileName'], '请用中文总结以下视频要点，带序号：')
+            return
+
         quote = '\n- - - - - - - - - - - - - - -\n'
         if not msg['IsAt'] or not quote in msg['Content']:
             return
@@ -131,8 +136,8 @@ class weChat():
             reply_text = self.chatBot.reply(query,context)
             if reply_text:
                 if title!='':
-                    self.articles.at[title,'Summary']=reply_text
-                    self.articles.to_csv(self.csvfile,index_label='FileName')
+                    self.posts.at[title,'Summary']=reply_text
+                    self.posts.to_csv(self.csvfile,index_label='FileName')
                 self.send(self.conf.get("single_chat_reply_prefix") + reply_text, reply_user_id)
                 
         except Exception as e:
@@ -142,8 +147,8 @@ class weChat():
     def _do_send_group(self,query,msg,title,prompt):
         if not query:
             return
-        if title !='' and title in self.articles.index and self.articles.loc[title]['Summary'] != '' and prompt=='':
-            query = self.articles.loc[title]['Summary'].split('[ChatGPT]')[-1]
+        if title !='' and title in self.posts.index and self.posts.loc[title]['Summary'] != '' and prompt=='':
+            query = self.posts.loc[title]['Summary'].split('[ChatGPT]')[-1]
             self.send(query, msg['User']['UserName'])
             return
         context = dict()
@@ -155,8 +160,8 @@ class weChat():
         reply_text = '@' + msg['ActualNickName'] + ' ' + reply_text.strip()
         if reply_text:
             if title != '':
-                self.articles.at[title, 'Summary'] = reply_text
-                self.articles.to_csv(self.csvfile, index_label='FileName')
+                self.posts.at[title, 'Summary'] = reply_text
+                self.posts.to_csv(self.csvfile, index_label='FileName')
             self.send(reply_text, msg['User']['UserName'])
         
 
@@ -190,13 +195,13 @@ class weChat():
             return match.group(1)
 
     def ripPost(self,filename):
-        row=self.articles.loc[filename]
+        row=self.posts.loc[filename]
         res = requests.get(row['Url'])
+
         soup = BeautifulSoup(res.text, "html.parser")
         for s in soup(['script', 'style']):
             s.decompose()
         queryText=soup.get_text(separator="\n")
-        query = queryText.split('\n')
 
         if 'mp.weixin.qq.com' in row['Url']:
             query1 = [x.get_text() for x in soup.find_all('section')]
@@ -211,9 +216,13 @@ class weChat():
             else:
                 queryText = '\n'.join(query)
 
+        return self.dealText(queryText)
+
+
+    def dealText(self,queryText):
         if len(queryText)<2500:
             return queryText
-
+        query = queryText.split('\n')
         def checkIndex(text: str):
             if len(text) < 4:
                 return False
@@ -235,3 +244,34 @@ class weChat():
         query.sort(key=query1.index)
         queryText='\n'.join(query)
         return queryText.replace('\n\n','\n')
+
+    def ripBili(self,bvUrl):
+        def bili_player_list(bvid):
+            url = 'https://api.bilibili.com/x/player/pagelist?bvid=' + bvid
+            response = requests.get(url)
+            cid_list = [x['cid'] for x in response.json()['data']]
+            return cid_list
+
+        def bili_subtitle_list(bvid, cid):
+            url = f'https://api.bilibili.com/x/player/v2?bvid={bvid}&cid={cid}'
+            response = requests.get(url,cookies={'SESSDATA': 'abf9c486%2C1693408321%2Ca2887%2A32'})
+            subtitles = response.json()['data']['subtitle']['subtitles']
+            if subtitles:
+                return ['https:' + x['subtitle_url'] for x in subtitles]
+            else:
+                return []
+
+        def bili_subtitle(bvid, cid):
+            subtitles = bili_subtitle_list(bvid, cid)
+            if subtitles:
+                response = requests.get(subtitles[0])
+                if response.status_code == 200:
+                    body = response.json()['body']
+                    return body
+            return []
+
+        soup = BeautifulSoup(requests.get(bvUrl).text, 'html.parser')
+        bvid = soup.find('meta', {'itemprop': 'url'})['content'].split('/')[-2]
+        query=bili_subtitle(bvid, bili_player_list(bvid)[0])
+
+        return '\n'.join(x['content'] for x in query)
