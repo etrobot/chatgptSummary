@@ -227,7 +227,6 @@ class weChat():
         if len(queryText) <= 2024:
             return queryText
         query = queryText.split('\n')
-        print(query)
 
         def checkIndex(text: str):
             startString = '一,二,三,四,五,六,七,八,九,首先,其次,再次,然后,最后'
@@ -239,8 +238,7 @@ class weChat():
             else:
                 return False
 
-        bullets = [x for x in query if len(x) >= 2 and checkIndex(x)]
-        print(bullets)
+        bullets = [x for x in query if len(x) >= 2 and checkIndex(x) and x not in query and x not in queryText[-1200:]]
         bulletsLen = len('\n'.join(bullets))
         query1 = queryText[:1200 - int(bulletsLen / 2)].split('\n')[:-1]
         query1.extend(bullets)
