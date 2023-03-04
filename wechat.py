@@ -228,8 +228,6 @@ class weChat():
             return queryText
         query = queryText.split('\n')
         def checkIndex(text: str):
-            if len(text) < 4:
-                return False
             startString = '一,二,三,四,五,六,七,八,九,首先,其次,再次,然后,最后'
             if text[0] in startString or text[:2] in startString:
                 return True
