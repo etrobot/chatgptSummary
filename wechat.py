@@ -224,7 +224,7 @@ class weChat():
 
 
     def dealText(self,queryText):
-        if len(queryText) <= 2024:
+        if len(queryText) <= 2400:
             return queryText
         query = queryText.split('\n')
 
