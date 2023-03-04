@@ -229,16 +229,15 @@ class weChat():
         query = queryText.split('\n')
 
         def checkIndex(text: str):
-            startString = '一,二,三,四,五,六,七,八,九,首先,其次,再次,然后,最后'
             ch_punc = u"[\u3002\uff1b\uff0c\uff1a\u201c\u201d\uff08\uff09\u3001\uff1f\u300a\u300b]"
-            if text[0] in startString or text[:2] in startString:
+            if text[0] in '一,二,三,四,五,六,七,八,九' or text[:2] in '首先,其次,再次,然后,最后,结论,总结,综上':
                 return True
             elif text[0].isdigit() and (text[1] in string.punctuation or text[1] in ch_punc):
                 return True
             else:
                 return False
 
-        bullets = [x for x in query if len(x) >= 2 and checkIndex(x) and x not in query]
+        bullets = [x for x in query if len(x) >= 2 and checkIndex(x)]
         bulletsLen = len('\n'.join(bullets))
         query1 = queryText[:1200 - int(bulletsLen / 2)].split('\n')[:-1]
         query1.extend(bullets)
