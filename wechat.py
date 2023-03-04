@@ -109,7 +109,10 @@ class weChat():
         if not msg['IsAt'] or not quote in msg['Content']:
             return
         content = msg['Content'].split(quote)
-        prompt = content[-1][len(msg['User']['Self']['DisplayName'])+1:]
+        name=msg['User']['Self']['NickName']
+        if not name:
+            name=msg['User']['Self']['DisplayName']
+        prompt = content[-1][len(name)+1:]
         query = content[0][len(msg['ActualNickName'])+1:]
         title=''
         if '[Link]' in msg['Content'] or '[链接]' in msg['Content']:
@@ -132,7 +135,7 @@ class weChat():
             if title!='':
                 query = self.conf.get("character_desc", "") + prompt + '\n『%s\n』'%query
             if len(prompt)<4 or len(query)>2000:
-                query = query +'\nTL;DR;用中文回复我。'
+                query = query +'\nTL;DR;'
             reply_text = self.chatBot.reply(query,context)
             if reply_text:
                 if title!='':
@@ -155,7 +158,7 @@ class weChat():
         context['from_user_id'] = msg['ActualUserName']
         query = self.conf.get("character_desc", "") + prompt + '\n『%s\n』'%query
         if len(prompt) < 4 or len(query) > 2000:
-            query = query + '\nTL;DR;用中文回复我。'
+            query = query + '\nTL;DR;'
         reply_text = self.chatBot.reply(query, context)
         reply_text = '@' + msg['ActualNickName'] + ' ' + reply_text.strip()
         if reply_text:
@@ -204,16 +207,17 @@ class weChat():
         queryText=soup.get_text(separator="\n")
 
         if 'mp.weixin.qq.com' in row['Url']:
-            query1 = [x.get_text() for x in soup.find_all('section')]
-            query2 = [x.get_text() for x in soup.find_all('p')]
-            if len(query2) > len(query1):
+            query1 = [x.get_text(separator='\n') for x in soup.find_all('section')]
+            query2 = [x.get_text(separator='\n') for x in soup.find_all('p')]
+            if len(''.join(query2)) > len(''.join(query1)):
                 query1 = query2
-            query = list(set(query1))
-            query.sort(key=query1.index)
-            if len('\n'.join(query))==0:
+            if len('\n'.join(query1)) == 0:
                 queryText = re.sub(r'\\x[0-9a-fA-F]{2}', '',
                                    soup.find('meta', {'name': 'description'}).attrs['content'])
             else:
+                query1 = '\n'.join(query1).split('\n')
+                query = list(set(query1))
+                query.sort(key=query1.index)
                 queryText = '\n'.join(query)
 
         return self.dealText(queryText)
@@ -242,8 +246,8 @@ class weChat():
         query1 = [x.strip() for x in query1 if len(x.strip()) > 2]
         query = list(set(query1))
         query.sort(key=query1.index)
-        queryText='\n'.join(query)
-        return queryText.replace('\n\n','\n')
+        queryText='\n'.join(query).replace('。\n','-#$RT$#-').replace('\n','').replace('-#$RT$#-','\n')
+        return queryText
 
     def ripBili(self,bvUrl):
         def bili_player_list(bvid):

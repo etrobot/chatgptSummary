@@ -40,8 +40,9 @@ class ChatGPTBot():
             user_cache = dict()
             for res in self.chatbot.ask(query):
                 user_cache=res
-                reply_rows=res['message'].split('\n')
-                if len(reply_rows)>1 and res['message'].endswith('\n'):
+                logMsg=res['message'].replace('\n\n','\n')
+                reply_rows=logMsg.split('\n')
+                if len(reply_rows)>1 and logMsg.endswith('\n'):
                     logging.getLogger('log').debug(reply_rows[-2])
             logging.getLogger('log').info("[GPT]userId={}, res={}".format(from_user_id, res))
             user_cache['last_reply_time'] = time.time()
