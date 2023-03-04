@@ -224,27 +224,31 @@ class weChat():
 
 
     def dealText(self,queryText):
-        if len(queryText)<2500:
+        if len(queryText) <= 2024:
             return queryText
         query = queryText.split('\n')
+        print(query)
+
         def checkIndex(text: str):
             startString = '一,二,三,四,五,六,七,八,九,首先,其次,再次,然后,最后'
+            ch_punc = u"[\u3002\uff1b\uff0c\uff1a\u201c\u201d\uff08\uff09\u3001\uff1f\u300a\u300b]"
             if text[0] in startString or text[:2] in startString:
                 return True
-            elif text[0].isdigit() and text[1] in string.punctuation:
+            elif text[0].isdigit() and (text[1] in string.punctuation or text[1] in ch_punc):
                 return True
             else:
                 return False
 
-        bullets = [x for x in query if len(x) > 2 and checkIndex(x)]
+        bullets = [x for x in query if len(x) >= 2 and checkIndex(x)]
+        print(bullets)
         bulletsLen = len('\n'.join(bullets))
-        query1 = queryText[:1500 - int(bulletsLen / 2)].split('\n')[:-1]
+        query1 = queryText[:1200 - int(bulletsLen / 2)].split('\n')[:-1]
         query1.extend(bullets)
-        query1.extend(queryText[-1500 + int(bulletsLen / 2):].split('\n')[1:])
-        query1 = [x.strip() for x in query1 if len(x.strip()) > 2]
+        query1.extend(queryText[-1200 + int(bulletsLen / 2):].split('\n')[1:])
+        query1 = [x.strip() for x in query1 if len(x.strip()) >= 2]
         query = list(set(query1))
         query.sort(key=query1.index)
-        queryText='\n'.join(query).replace('。\n','-#$RT$#-').replace('\n','').replace('-#$RT$#-','\n')
+        queryText = '\n'.join(query).replace('。\n', '-#$RT$#-').replace('\n', '').replace('-#$RT$#-', '\n')
         return queryText
 
     def ripBili(self,bvUrl):
