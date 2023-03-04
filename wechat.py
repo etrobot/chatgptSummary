@@ -109,9 +109,9 @@ class weChat():
         if not msg['IsAt'] or not quote in msg['Content']:
             return
         content = msg['Content'].split(quote)
-        name=msg['User']['Self']['NickName']
-        if not name:
-            name=msg['User']['Self']['DisplayName']
+        name=msg['User']['Self']['DisplayName']
+        if name == '':
+            name=msg['User']['Self']['NickName']
         prompt = content[-1][len(name)+1:]
         query = content[0][len(msg['ActualNickName'])+1:]
         title=''
@@ -150,7 +150,7 @@ class weChat():
     def _do_send_group(self,query,msg,title,prompt):
         if not query:
             return
-        if title !='' and title in self.posts.index and self.posts.loc[title]['Summary'] != '' and prompt=='':
+        if title !='' and title in self.posts.index and self.posts.loc[title]['Summary'] != '' and ('总结' in prompt or prompt==''):
             query = self.posts.loc[title]['Summary'].split('[ChatGPT]')[-1]
             self.send(query, msg['User']['UserName'])
             return
