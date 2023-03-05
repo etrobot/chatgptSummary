@@ -46,8 +46,8 @@ class ChatGPTBot():
                 logMsg=res['message'].replace('\n\n','\n')
                 reply_rows=logMsg.split('\n')
                 if len(reply_rows)>1 and logMsg.endswith('\n'):
-                    logging.getLogger('log').debug(reply_rows[-2])
-            logging.getLogger('log').info("[GPT]userId={}, res={}".format(from_user_id, res))
+                    logging.getLogger('log').info(reply_rows[-2])
+            logging.getLogger('log').debug("[GPT]userId={}, res={}".format(from_user_id, res))
             user_cache['last_reply_time'] = time.time()
             user_session[from_user_id] = user_cache
             with open('./user_session.json', 'w', encoding='utf-8') as f:

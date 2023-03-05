@@ -89,7 +89,7 @@ class weChat():
             return
         if '[Message cannot be displayed]' in msg['Content']:
             query=tl.dealText(tl.ripBili(tl.posts.df[tl.posts.df['Url'].str.contains('23.tv')]['Url'].iloc[-1]))
-            tl.thread_pool.submit(self._do_send_group, query, msg, msg['FileName'], '请用中文总结以下视频要点，带序号：')
+            tl.thread_pool.submit(self._do_send_group, query, msg, msg['FileName'], '总结要点，带序号：')
             return
 
         quote = '\n- - - - - - - - - - - - - - -\n'
@@ -144,7 +144,7 @@ class weChat():
         context = dict()
         context['from_user_id'] = msg['ActualUserName']
         query = tl.conf.get("character_desc", "") + prompt + '\n『%s\n』'%query
-        if len(prompt) < 4 or len(query) > 2000:
+        if len(prompt) < 4 or len(query) > 320:
             query = query + '\nTL;DR;'
         reply_text = self.chatBot.reply(query, context)
         reply_text = '@' + msg['ActualNickName'] + ' ' + reply_text.strip()

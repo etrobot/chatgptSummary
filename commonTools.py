@@ -142,6 +142,6 @@ def ripBili(bvUrl):
 
 thread_pool = ThreadPoolExecutor(max_workers=8)
 log = logging.getLogger('log')
-log.setLevel(logging.WARNING)
+log.setLevel(logging.INFO)
 posts=posts()
 conf=conf()
