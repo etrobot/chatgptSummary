@@ -5,5 +5,6 @@
   "single_chat_reply_prefix": "[ChatGPT] ",
   "group_name_white_list": ["AI 应用研讨群","猴塞雷666","产品小分队"],
   "conversation_max_tokens": 1000,
-  "character_desc": ""
+  "character_desc": "",
+  "mp.weixin.qq.com": "js_content"
 }

@@ -123,7 +123,7 @@ class weChat():
             if query!='':
                 queryText=queryText+'\n『%s\n』'%query
             if len(query)>2000 or '总结' in prompt:
-                queryText = queryText +'\nTL;DR;'
+                queryText = queryText +'\nTL;DR;Use Chinese.'
             reply_text = self.chatBot.reply(queryText,context)
             if reply_text:
                 if title!='':
@@ -144,9 +144,9 @@ class weChat():
             return
         context = dict()
         context['from_user_id'] = msg['ActualUserName']
-        query = tl.conf.get("character_desc", "") + prompt + '\n『%s\n』'%query
+        query = tl.conf.get("character_desc", "") + prompt + '\n『%s』'%query
         if len(prompt) < 4 or len(query) > 600:
-            query = query + '\nTL;DR;'
+            query = query + '\nTL;DR; Use Chinese.'
         reply_text = self.chatBot.reply(query, context)
         reply_text = '@' + msg['ActualNickName'] + ' ' + reply_text.strip()
         if reply_text:

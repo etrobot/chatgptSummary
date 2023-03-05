@@ -62,6 +62,8 @@ def ripPost(filename,posts):
     queryText = soup.get_text(separator="\n")
 
     if 'mp.weixin.qq.com' in row['Url']:
+        if conf.get( 'mp.weixin.qq.com' ):
+            soup=soup.find(id=conf.get( 'mp.weixin.qq.com' ))
         query1 = [x.get_text(separator='\n') for x in soup.find_all('section')]
         query2 = [x.get_text(separator='\n') for x in soup.find_all('p')]
         if len(''.join(query2)) > len(''.join(query1)):
@@ -73,7 +75,7 @@ def ripPost(filename,posts):
             query1 = '\n'.join(query1).split('\n')
             query = list(set(query1))
             query.sort(key=query1.index)
-            queryText = '\n'.join(query)
+            queryText = '《%s》'%filename+'\n'.join(query)
 
     return dealText(queryText)
 
