@@ -113,9 +113,12 @@ def ripBili(bvUrl):
 
     def bili_subtitle_list(bvid, cid):
         url = f'https://api.bilibili.com/x/player/v2?bvid={bvid}&cid={cid}'
-        vikaUrl = 'https://api.vika.cn/fusion/v1/datasheets/dstMiuU9zzihy1LzFX/records?viewId=viwoAJhnS2NMT&fieldKey=name'
-        vikaCache = json.loads(requests.get(vikaUrl, headers={'Authorization': conf.get("sstoken")}).text)['data']['records']
-        response = requests.get(url, cookies={'SESSDATA': [x['fields']['value'] for x in vikaCache if x['recordId']=='recRh258ujPiq'][0]})
+        sessdata=conf.get('SESSDATA')
+        if conf.get('vika.cn'):
+            vikaUrl = 'https://api.vika.cn/fusion/v1/datasheets/dstMiuU9zzihy1LzFX/records?viewId=viwoAJhnS2NMT&fieldKey=name'
+            vikaCache = json.loads(requests.get(vikaUrl, headers={'Authorization': conf.get("vika.cn")}).text)['data']['records']
+            sessdata=[x['fields']['value'] for x in vikaCache if x['recordId']=='recRh258ujPiq'][0]
+        response = requests.get(url, cookies={'SESSDATA':sessdata })
         subtitles = response.json()['data']['subtitle']['subtitles']
         if subtitles:
             return ['https:' + x['subtitle_url'] for x in subtitles]
