@@ -224,7 +224,7 @@ class weChat():
 
 
     def dealText(self,queryText):
-        if len(queryText) <= 2400:
+        if len(queryText) < 2046:
             return queryText
         query = queryText.split('\n')
 
@@ -239,10 +239,10 @@ class weChat():
 
         keyPoints = [x for x in query if len(x) >= 2 and checkIndex(x)]
         keyPointsLen = len('\n'.join(keyPoints))
-        query1 = queryText[:1200 - int(keyPointsLen / 2)].split('\n')[:-1]
+        query1 = queryText[:1024 - int(keyPointsLen / 2)].split('\n')[:-1]
         query1.extend(keyPoints)
         query1 = [x for x in query1 if x not in queryText[-1200 + int(keyPointsLen / 2):]]
-        query1.extend(queryText[-1200 + int(keyPointsLen / 2):].split('\n')[1:])
+        query1.extend(queryText[-1024 + int(keyPointsLen / 2):].split('\n')[1:])
         query1 = [x.strip() for x in query1 if len(x.strip()) >= 2]
         query = list(set(query1))
         query.sort(key=query1.index)
