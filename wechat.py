@@ -3,6 +3,8 @@
 """
 wechat channel
 """
+import logging
+
 import itchat
 from itchat.content import *
 from chatgptBot import ChatGPTBot
@@ -43,34 +45,33 @@ class weChat():
         content = msg['Text']
         if content == "McDonald's ":
             self.chatBot.chatbot.reset_chat()
-        if msg['MsgType']==49 and msg['FileName'] not in tl.posts.df.index:
-            df=pd.DataFrame(data=[[msg['Url'],'']],index=[msg['FileName']],columns=['Url','Summary'])
-            tl.posts.df=tl.posts.df.append(df)
-            tl.posts.update()
-        match_prefix = tl.check_prefix(content, tl.conf.get('single_chat_prefix'))
         quote='\n- - - - - - - - - - - - - - -\n'
-        if from_user_id == other_user_id and match_prefix is not None:
-            prompt = content[len(match_prefix):]
+        if from_user_id == other_user_id:
+            match_prefix = tl.check_prefix(content, tl.conf.get('single_chat_prefix'))
+            query=''
+            prompt=''
             filename = ''
-            if '[Link]' in content or '[链接]' in content:
+            if msg['MsgType'] == 49:
+                filename = msg['FileName']
+                if msg['FileName'] not in tl.posts.df.index:
+                    df = pd.DataFrame(data=[[msg['Url'], '']], index=[filename], columns=['Url', 'Summary'])
+                    tl.posts.df = tl.posts.df.append(df)
+                    tl.posts.update()
+                prompt = '总结要点，带序号:'
+                query = tl.ripPost(filename, tl.posts.df)
+            elif '[Link]' in content or '[链接]' in content:
                 filename = tl.extractWxTitle(content)
                 prompt = content.split(quote)[-1][len(match_prefix):]
                 query=tl.ripPost(filename,tl.posts.df)
-            elif quote in content:
-                query=content.split(quote)
-                query=query[1][len(match_prefix):]+' '+query[0]
-            else:
-                query=content[len(match_prefix):]
-            if query is not None:
-                tl.thread_pool.submit(self._do_send, query,from_user_id,prompt,filename)
+            elif quote in content :
+                querys=content.split(quote)
+                query=querys[0]
+                prompt=querys[1]
+            elif match_prefix is not None:
+                prompt = content[len(match_prefix):]
+            tl.thread_pool.submit(self._do_send, query,from_user_id,prompt,filename)
 
-        elif to_user_id == other_user_id and match_prefix:
-            # 自己给好友发送消息
-            str_list = content.split(match_prefix, 1)
-            if len(str_list) == 2:
-                content = str_list[1].strip()
-                tl.posts.df.at[tl.extractWxTitle(content), 'Summary'] = content
-                tl.posts.update()
+
 
 
     def handle_group(self, msg):
@@ -114,16 +115,16 @@ class weChat():
 
     def _do_send(self, query,reply_user_id,prompt,title):
         try:
-            if not query:
+            if query=='' and prompt=='':
                 return
             context = dict()
             context['from_user_id'] = reply_user_id
-            waiting = True
-            if title!='':
-                query = tl.conf.get("character_desc", "") + prompt + '\n『%s\n』'%query
-            if len(prompt)<4 or len(query)>2000:
-                query = query +'\nTL;DR;'
-            reply_text = self.chatBot.reply(query,context)
+            queryText = tl.conf.get("character_desc", "") + prompt
+            if query!='':
+                queryText=queryText+'\n『%s\n』'%query
+            if len(query)>2000 or '总结' in prompt:
+                queryText = queryText +'\nTL;DR;'
+            reply_text = self.chatBot.reply(queryText,context)
             if reply_text:
                 if title!='':
                     tl.posts.df.at[title,'Summary']=reply_text
@@ -144,12 +145,12 @@ class weChat():
         context = dict()
         context['from_user_id'] = msg['ActualUserName']
         query = tl.conf.get("character_desc", "") + prompt + '\n『%s\n』'%query
-        if len(prompt) < 4 or len(query) > 320:
+        if len(prompt) < 4 or len(query) > 600:
             query = query + '\nTL;DR;'
         reply_text = self.chatBot.reply(query, context)
         reply_text = '@' + msg['ActualNickName'] + ' ' + reply_text.strip()
         if reply_text:
-            if title != '':
+            if title != '' and reply_text.strip('\n')<4:
                 tl.posts.df.at[title, 'Summary'] = reply_text
                 tl.posts.update()
             self.send(reply_text, msg['User']['UserName'])

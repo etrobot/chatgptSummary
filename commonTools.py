@@ -22,9 +22,9 @@ class conf():
     def get(self,key:str,default=None):
         return self.conf.get(key,default)
 
-def check_prefix(content, prefix_list):
+def check_prefix(content:str, prefix_list):
     for prefix in prefix_list:
-        if prefix in content:
+        if content.startswith(prefix):
             return prefix
     return None
 def extractWxTitle(txt):
@@ -53,6 +53,8 @@ def dealWxUrl(rawurl:str):
 def ripPost(filename,posts):
     row = posts.loc[filename]
     res = requests.get(row['Url'])
+    if '23.tv' in row['Url']:
+        return dealText(ripBili(row['Url']))
 
     soup = BeautifulSoup(res.text, "html.parser")
     for s in soup(['script', 'style']):
@@ -99,6 +101,9 @@ def dealText(queryText:str):
     query1 = [x.strip() for x in query1 if len(x.strip()) >= 2]
     query = list(set(query1))
     query.sort(key=query1.index)
+    for item in query:
+        if item in keyPoints:
+            query[query.index(item)]='-#$RT$#-'+item
     queryText = '\n'.join(query).replace('。\n', '-#$RT$#-').replace('\n', '').replace('-#$RT$#-', '\n')
     log.debug('Text Length: %s' % len(queryText))
     return queryText
@@ -142,6 +147,6 @@ def ripBili(bvUrl):
 
 thread_pool = ThreadPoolExecutor(max_workers=8)
 log = logging.getLogger('log')
-log.setLevel(logging.INFO)
+log.setLevel(logging.DEBUG)
 posts=posts()
 conf=conf()
