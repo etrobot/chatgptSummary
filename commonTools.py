@@ -26,7 +26,7 @@ def check_prefix(content:str, prefix_list):
     for prefix in prefix_list:
         if content.startswith(prefix):
             return prefix
-    return None
+    return ''
 def extractWxTitle(txt):
     pattern = r'\[Link\]\s+(.*?)"\n- - - - - - - - - - - - - - -\n'
     if '[链接]' in txt:
@@ -96,10 +96,10 @@ def dealText(queryText:str):
 
     keyPoints = [x for x in query if len(x) >= 2 and checkIndex(x)]
     keyPointsLen = len('\n'.join(keyPoints))
-    query1 = queryText[:1024 - int(keyPointsLen / 2)].split('\n')[:-1]
+    query1 = queryText[:999 - int(keyPointsLen / 2)].split('\n')[:-1]
     query1.extend(keyPoints)
     query1 = [x for x in query1 if x not in queryText[-1200 + int(keyPointsLen / 2):]]
-    query1.extend(queryText[-1024 + int(keyPointsLen / 2):].split('\n')[1:])
+    query1.extend(queryText[-999 + int(keyPointsLen / 2):].split('\n')[1:])
     query1 = [x.strip() for x in query1 if len(x.strip()) >= 2]
     query = list(set(query1))
     query.sort(key=query1.index)
@@ -148,7 +148,7 @@ def ripBili(bvUrl):
     return '\n'.join(x['content'] for x in query)
 
 thread_pool = ThreadPoolExecutor(max_workers=8)
-log = logging.getLogger('log')
+log = logging.getLogger('itchat')
 log.setLevel(logging.DEBUG)
 posts=posts()
 conf=conf()

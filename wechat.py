@@ -38,7 +38,7 @@ class weChat():
 
 
     def handle(self, msg):
-        tl.log.debug(msg)
+        tl.log.info(msg)
         from_user_id = msg['FromUserName']
         to_user_id = msg['ToUserName']              # 接收人id
         other_user_id = msg['User']['UserName']     # 对手方id
@@ -67,7 +67,7 @@ class weChat():
                 querys=content.split(quote)
                 query=querys[0]
                 prompt=querys[1]
-            elif match_prefix is not None:
+            elif match_prefix != '':
                 prompt = content[len(match_prefix):]
             tl.thread_pool.submit(self._do_send, query,from_user_id,prompt,filename)
 

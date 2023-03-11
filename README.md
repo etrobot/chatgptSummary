@@ -8,8 +8,6 @@
 
 [chatgpt-on-wechat](https://github.com/zhayujie/chatgpt-on-wechat)
 
-[chatgpt-on-wecom](https://github.com/mostlittlebee/chatgpt-on-wecom)
-
 API：
 
 [ChatGPT](https://github.com/acheong08/ChatGPT)
