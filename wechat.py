@@ -3,12 +3,10 @@
 """
 wechat channel
 """
-import logging
 
 import itchat
 from itchat.content import *
-from chatgptBot import ChatGPTBot
-import json
+from poe import poeBot
 import pandas as pd
 import commonTools as tl
 
@@ -27,7 +25,7 @@ def handler_group_msg(msg):
 
 class weChat():
     def __init__(self):
-        self.chatBot=ChatGPTBot(tl.conf)
+        self.chatBot=poeBot(tl.conf)
         pass
 
     def startup(self):
@@ -44,7 +42,7 @@ class weChat():
         other_user_id = msg['User']['UserName']     # 对手方id
         content = msg['Text']
         if content == "McDonald's ":
-            self.chatBot.chatbot.reset_chat()
+            self.chatBot.clear_context(self.chatBot.chat_id)
         quote='\n- - - - - - - - - - - - - - -\n'
         if from_user_id == other_user_id:
             match_prefix = tl.check_prefix(content, tl.conf.get('single_chat_prefix'))
@@ -133,7 +131,6 @@ class weChat():
                 
         except Exception as e:
             tl.log.exception(e)
-            waiting = False
 
     def _do_send_group(self,query,msg,title,prompt):
         if not query:

@@ -10,4 +10,6 @@
 
 API：
 
-[ChatGPT](https://github.com/acheong08/ChatGPT)
+[Poe](https://github.com/vaibhavk97/Poe)
+
+说明：Poe是Quora推出的机器人，使用该api时需要查看Quora网页源代码获取Formkey以及cookie中的m-b字段填到config.json中。

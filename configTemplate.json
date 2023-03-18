@@ -6,5 +6,7 @@
   "group_name_white_list": ["AI 应用研讨群","猴塞雷666","产品小分队"],
   "conversation_max_tokens": 1000,
   "character_desc": "",
-  "mp.weixin.qq.com": "js_content"
+  "mp.weixin.qq.com": "js_content",
+  "Cookie":"m-b=TbpoWUuTgWA==",
+  "Quora-Formkey":"522d1b7551533"
 }

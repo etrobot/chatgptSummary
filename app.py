@@ -1,5 +1,3 @@
-import logging
-
 from wechat import *
 
 if __name__ == "__main__":

@@ -1,8 +1,12 @@
+
 import json
 import time
 
 import requests
 from revChatGPT.V1 import Chatbot
+'''
+注意！revChatGPT 会导致封号
+'''
 import logging
 
 user_session = dict()
@@ -26,7 +30,7 @@ class ChatGPTBot():
     def reply(self, query, context=None):
 
         from_user_id = context['from_user_id']
-        logging.getLogger('log').info("[GPT]query={}, user_id={}, session={}".format(query, from_user_id, user_session))
+        logging.getLogger('itchat').info("[GPT]query={}, user_id={}, session={}".format(query, from_user_id, user_session))
 
         if from_user_id in user_session:
             if time.time() - user_session[from_user_id]['last_reply_time'] < 60 * 5:
@@ -54,5 +58,5 @@ class ChatGPTBot():
                 json.dump(user_session, f)
             return res['message']
         except Exception as e:
-            logging.getLogger('log').exception(e)
+            logging.getLogger('itchat').exception(e)
             return None
