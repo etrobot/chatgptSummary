@@ -124,9 +124,6 @@ class weChat():
                 queryText = queryText +'\nTL;DR;Use Chinese.'
             reply_text = self.chatBot.reply(queryText,context)
             if reply_text:
-                if title!='':
-                    tl.posts.df.at[title,'Summary']=reply_text
-                    tl.posts.update()
                 self.send(tl.conf.get("single_chat_reply_prefix") + reply_text, reply_user_id)
                 
         except Exception as e:
@@ -141,14 +138,14 @@ class weChat():
             return
         context = dict()
         context['from_user_id'] = msg['ActualUserName']
+        group_id = msg['User']['UserName']
         query = tl.conf.get("character_desc", "") + prompt + '\n『%s』'%query
         if len(prompt) < 4 or len(query) > 600:
             query = query + '\nTL;DR; Use Chinese.'
         reply_text = self.chatBot.reply(query, context)
-        reply_text = '@' + msg['ActualNickName'] + ' ' + reply_text.strip()
         if reply_text:
-            if title != '' and reply_text.strip('\n')<4:
+            reply_text = '@' + msg['ActualNickName'] + ' ' + reply_text.strip()
+            self.send(reply_text, group_id)
+            if title != '' and title in tl.posts.df.index:
                 tl.posts.df.at[title, 'Summary'] = reply_text
                 tl.posts.update()
-            self.send(reply_text, msg['User']['UserName'])
-

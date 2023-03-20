@@ -27,71 +27,72 @@ class poeBot():
             'https': conf.get('proxy'),
         }
         self.bot = 'capybara'
-        self.chat_id = self.load_chat_id_map(self.bot)
+        self.chat_id = self.load_chat_id_map()
 
-    def load_chat_id_map(self, bot="a2"):
+    def load_chat_id_map(self):
         data = {
             'operationName': 'ChatViewQuery',
             'query': 'query ChatViewQuery($bot: String!) {\n  chatOfBot(bot: $bot) {\n    __typename\n    ...ChatFragment\n  }\n}\nfragment ChatFragment on Chat {\n  __typename\n  id\n  chatId\n  defaultBotNickname\n  shouldShowDisclaimer\n}',
             'variables': {
-                'bot': bot
+                'bot': self.bot
             }
         }
         response = requests.post(self.url, headers=self.headers, json=data, proxies=self.proxies)
         return response.json()['data']['chatOfBot']['chatId']
 
-    def send_message(self, message, bot="a2", chat_id=""):
+    def send_message(self, message):
         data = {
             "operationName": "AddHumanMessageMutation",
             "query": "mutation AddHumanMessageMutation($chatId: BigInt!, $bot: String!, $query: String!, $source: MessageSource, $withChatBreak: Boolean! = false) {\n  messageCreate(\n    chatId: $chatId\n    bot: $bot\n    query: $query\n    source: $source\n    withChatBreak: $withChatBreak\n  ) {\n    __typename\n    message {\n      __typename\n      ...MessageFragment\n      chat {\n        __typename\n        id\n        shouldShowDisclaimer\n      }\n    }\n    chatBreak {\n      __typename\n      ...MessageFragment\n    }\n  }\n}\nfragment MessageFragment on Message {\n  id\n  __typename\n  messageId\n  text\n  linkifiedText\n  authorNickname\n  state\n  vote\n  voteReason\n  creationTime\n  suggestedReplies\n}",
             "variables": {
-                "bot": bot,
-                "chatId": chat_id,
+                "bot": self.bot,
+                "chatId": self.chat_id,
                 "query": message,
                 "source": None,
                 "withChatBreak": False
             }
         }
-        _ = requests.post(self.url, headers=self.headers, json=data, proxies=self.proxies)
+        rsp = requests.post(self.url, headers=self.headers, json=data, proxies=self.proxies)
+        # logging.getLogger('log').debug(rsp.text)
 
-    def clear_context(self, chatid):
+    def clear_context(self):
         data = {
             "operationName": "AddMessageBreakMutation",
             "query": "mutation AddMessageBreakMutation($chatId: BigInt!) {\n  messageBreakCreate(chatId: $chatId) {\n    __typename\n    message {\n      __typename\n      ...MessageFragment\n    }\n  }\n}\nfragment MessageFragment on Message {\n  id\n  __typename\n  messageId\n  text\n  linkifiedText\n  authorNickname\n  state\n  vote\n  voteReason\n  creationTime\n  suggestedReplies\n}",
             "variables": {
-                "chatId": chatid
+                "chatId": self.chat_id
             }
         }
         _ = requests.post(self.url, headers=self.headers, json=data, proxies=self.proxies)
 
-    def get_latest_message(self, bot):
+    def get_latest_message(self):
         data = {
             "operationName": "ChatPaginationQuery",
             "query": "query ChatPaginationQuery($bot: String!, $before: String, $last: Int! = 10) {\n  chatOfBot(bot: $bot) {\n    id\n    __typename\n    messagesConnection(before: $before, last: $last) {\n      __typename\n      pageInfo {\n        __typename\n        hasPreviousPage\n      }\n      edges {\n        __typename\n        node {\n          __typename\n          ...MessageFragment\n        }\n      }\n    }\n  }\n}\nfragment MessageFragment on Message {\n  id\n  __typename\n  messageId\n  text\n  linkifiedText\n  authorNickname\n  state\n  vote\n  voteReason\n  creationTime\n}",
             "variables": {
                 "before": None,
-                "bot": bot,
+                "bot": self.bot,
                 "last": 1
             }
         }
         author_nickname = ""
         state = "incomplete"
+        text=None
         while True:
             time.sleep(2)
             response = requests.post(self.url, headers=self.headers, json=data, proxies=self.proxies)
             response_json = response.json()
+            # logging.getLogger('itchat').debug(response_json)
             text = response_json['data']['chatOfBot']['messagesConnection']['edges'][-1]['node']['text']
             state = response_json['data']['chatOfBot']['messagesConnection']['edges'][-1]['node']['state']
-            author_nickname = response_json['data']['chatOfBot']['messagesConnection']['edges'][-1]['node'][
-                'authorNickname']
-            if author_nickname == bot and state == 'complete':
+            if state == 'complete' or state=='error':
                 break
         return text
 
     def reply(self, message: str, context={}):
-        logging.getLogger('log').info("[GPT]query={}, user_id={}".format(message, context.get('from_user_id')))
-        self.send_message(message, self.bot, self.chat_id)
-        reply = self.get_latest_message(self.bot)
+        # logging.getLogger('itchat').info("[GPT]query={}, user_id={}".format(message, context.get('from_user_id')))
+        self.send_message(message)
+        reply = self.get_latest_message()
         logging.getLogger('itchat').debug(f"{self.bot} : {reply}")
         if context is not None:
             with open('./user_session.json', 'w', encoding='utf-8') as f:
