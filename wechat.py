@@ -108,7 +108,7 @@ class weChat():
             tl.thread_pool.submit(self._do_send_group,query,msg,title,prompt)
 
     def send(self, msg, receiver):
-        tl.log.info('[WX] sendMsg={}, receiver={}'.format(msg, receiver))
+        # tl.log.info('[WX] sendMsg={}, receiver={}'.format(msg, receiver))
         itchat.send(msg, toUserName=receiver)
 
     def _do_send(self, query,reply_user_id,prompt,title):

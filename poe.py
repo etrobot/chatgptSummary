@@ -1,6 +1,7 @@
 import json
 
 import requests
+from requests.adapters import HTTPAdapter
 import time, logging
 
 
@@ -9,7 +10,6 @@ class poeBot():
     def __init__(self, conf: dict):
 
         self.url = 'https://www.quora.com/poe_api/gql_POST'
-
         self.headers  = {
             'Host': 'www.quora.com',
             'Accept': '*/*',
@@ -28,6 +28,7 @@ class poeBot():
         }
         self.bot = 'capybara'
         self.chat_id = self.load_chat_id_map()
+        self.state='incomplete'
 
     def load_chat_id_map(self):
         data = {
@@ -52,7 +53,9 @@ class poeBot():
                 "withChatBreak": False
             }
         }
-        rsp = requests.post(self.url, headers=self.headers, json=data, proxies=self.proxies)
+        s = requests.session()
+        s.mount('https://', HTTPAdapter(max_retries=3))
+        rsp = s.request("POST",url=self.url, headers=self.headers, json=data, proxies=self.proxies,timeout=5)
         # logging.getLogger('log').debug(rsp.text)
 
     def clear_context(self):
@@ -75,18 +78,15 @@ class poeBot():
                 "last": 1
             }
         }
-        author_nickname = ""
-        state = "incomplete"
         text=None
-        while True:
+        while self.state == "incomplete":
             time.sleep(2)
-            response = requests.post(self.url, headers=self.headers, json=data, proxies=self.proxies)
+            response = requests.post(self.url, headers=self.headers, json=data, proxies=self.proxies,timeout=3)
             response_json = response.json()
-            # logging.getLogger('itchat').debug(response_json)
+            # logging.getLogger('itchat').info(response_json)
             text = response_json['data']['chatOfBot']['messagesConnection']['edges'][-1]['node']['text']
-            state = response_json['data']['chatOfBot']['messagesConnection']['edges'][-1]['node']['state']
-            if state == 'complete' or state=='error':
-                break
+            self.state = response_json['data']['chatOfBot']['messagesConnection']['edges'][-1]['node']['state']
+            logging.getLogger('itchat').debug(self.state)
         return text
 
     def reply(self, message: str, context={}):
