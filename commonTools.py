@@ -97,10 +97,10 @@ def dealText(queryText:str):
 
     keyPoints = [x for x in query if len(x) >= 2 and checkIndex(x)]
     keyPointsLen = len('\n'.join(keyPoints))
-    query1 = queryText[:920 - int(keyPointsLen / 2)].split('\n')[:-1]
+    query1 = queryText[:840 - int(keyPointsLen / 2)].split('\n')[:-1]
     query1.extend(keyPoints)
     query1 = [x for x in query1 if x not in queryText[-1200 + int(keyPointsLen / 2):]]
-    query1.extend(queryText[-920 + int(keyPointsLen / 2):].split('\n')[1:])
+    query1.extend(queryText[-1000 + int(keyPointsLen / 2):].split('\n')[1:])
     query1 = [x.strip() for x in query1 if len(x.strip()) >= 2]
     query = list(set(query1))
     query.sort(key=query1.index)

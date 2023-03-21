@@ -28,9 +28,10 @@ class poeBot():
         }
         self.headers['Quora-Formkey']=self.getFormkey()
         self.ss=requests.session()
-        self.bot = 'capybara'
+        self.bot = conf.get('llm','capybara')
         self.chat_id = self.load_chat_id_map()
-        self.state='incomplete'
+        self.clear_context()
+        self.state=None
 
     def getFormkey(self):
         pattern=r'formkey": "(.*?)", "errorSamplingRate'
@@ -50,6 +51,8 @@ class poeBot():
         return response.json()['data']['chatOfBot']['chatId']
 
     def send_message(self, message):
+        if self.state == "incomplete":
+            return
         data = {
             "operationName": "AddHumanMessageMutation",
             "query": "mutation AddHumanMessageMutation($chatId: BigInt!, $bot: String!, $query: String!, $source: MessageSource, $withChatBreak: Boolean! = false) {\n  messageCreate(\n    chatId: $chatId\n    bot: $bot\n    query: $query\n    source: $source\n    withChatBreak: $withChatBreak\n  ) {\n    __typename\n    message {\n      __typename\n      ...MessageFragment\n      chat {\n        __typename\n        id\n        shouldShowDisclaimer\n      }\n    }\n    chatBreak {\n      __typename\n      ...MessageFragment\n    }\n  }\n}\nfragment MessageFragment on Message {\n  id\n  __typename\n  messageId\n  text\n  linkifiedText\n  authorNickname\n  state\n  vote\n  voteReason\n  creationTime\n  suggestedReplies\n}",
@@ -62,7 +65,9 @@ class poeBot():
             }
         }
         _rspn = self.ss.request("POST",url=self.url, headers=self.headers, json=data, proxies=self.proxies,timeout=5)
-        self.state = 'incomplete'
+        self.state = "incomplete"
+        time.sleep(2)
+        return self.get_latest_message()
         # logging.getLogger('log').debug(rsp.text)
 
     def clear_context(self):
@@ -86,23 +91,24 @@ class poeBot():
                 "last": 1
             }
         }
-        text=None
+        replyText=None
         while self.state == "incomplete":
-            time.sleep(2)
             _rspn = self.ss.request("POST", url=self.url, headers=self.headers, json=data, proxies=self.proxies,
                                     timeout=3)
             response_json = _rspn.json()
             # logging.getLogger('itchat').info(response_json)
-            text = response_json['data']['chatOfBot']['messagesConnection']['edges'][-1]['node']['text']
+            replyText = response_json['data']['chatOfBot']['messagesConnection']['edges'][-1]['node']['text']
             self.state = response_json['data']['chatOfBot']['messagesConnection']['edges'][-1]['node']['state']
+            if self.state == "complete":
+                return replyText
             logging.getLogger('itchat').debug(self.state)
-        return text
+            time.sleep(2)
+        return replyText
 
     def reply(self, message: str, context=None):
-        self.send_message(message)
-        reply = self.get_latest_message()
-        logging.getLogger('itchat').debug(f"{self.bot} : {reply}")
+        replyText = self.send_message(message)
+        # logging.getLogger('itchat').debug(f"{self.bot} : {replyText}")
         if context is not None:
             with open('./user_session.json', 'w', encoding='utf-8') as f:
                 json.dump(context, f)
-        return reply
+        return replyText
