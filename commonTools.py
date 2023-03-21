@@ -148,6 +148,12 @@ def ripBili(bvUrl):
 
     return '\n'.join(x['content'] for x in query)
 
+def is_contain_chinese(check_str):
+    for ch in check_str:
+        if u'\u4e00' <= ch <= u'\u9fff':
+            return True
+    return False
+
 thread_pool = ThreadPoolExecutor(max_workers=8)
 log = logging.getLogger('itchat')
 log.setLevel(logging.DEBUG)

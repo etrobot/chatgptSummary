@@ -73,8 +73,6 @@ class weChat():
             tl.thread_pool.submit(self._do_send, query,from_user_id,prompt,filename)
 
 
-
-
     def handle_group(self, msg):
         group_name = msg['User'].get('NickName', None)
         if not group_name:
@@ -121,8 +119,8 @@ class weChat():
             queryText = tl.conf.get("character_desc", "") + prompt
             if query!='':
                 queryText=queryText+'\n『%s\n』'%query
-            if len(query)>2000 or '总结' in prompt:
-                queryText = queryText +'\nTL;DR;Use Chinese.'
+            if len(query)>1400 or '总结' in prompt:
+                queryText = queryText +'\nTL;DR; Summary in Chinese'
             reply_text = self.chatBot.reply(queryText,context)
             if reply_text is not None:
                 self.send('[LLM]' + reply_text, reply_user_id)
@@ -143,11 +141,11 @@ class weChat():
         context['from_user_id'] = msg['ActualUserName']
         group_id = msg['User']['UserName']
         query = tl.conf.get('character_desc', '') + prompt + '\n『%s』'%query
-        if len(prompt) < 4 or len(query) > 600:
-            query = query + '\nTL;DR; Use Chinese.'
+        if len(prompt) < 4 or len(query) > 700:
+            query = query + '\nTL;DR; Summary in Chinese'
         reply_text = self.chatBot.reply(query, context)
         if reply_text is not None:
             self.send('@' + msg['ActualNickName'] + ' ' + reply_text.strip(), group_id)
-            if title != '' and title in tl.posts.df.index and self.chatBot.state=='complete':
+            if title != '' and title in tl.posts.df.index and self.chatBot.state=='complete' and tl.is_contain_chinese(reply_text):
                 tl.posts.update(key=title,field= 'Summary',content=reply_text)
 
