@@ -11,7 +11,8 @@ class posts():
         self.filename='./articles.csv'
         self.df=pd.read_csv(self.filename,index_col='FileName',keep_default_na=False)
 
-    def update(self):
+    def update(self,key,field,content):
+        self.df.at[key, field] = content
         self.df.to_csv(self.filename,index_label='FileName')
 
 class conf():

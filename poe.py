@@ -1,4 +1,5 @@
 import json
+import re
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -20,15 +21,22 @@ class poeBot():
             'Connection': 'close',
             'Content-Type': 'application/json',
             'Cookie': conf.get('Cookie'),
-            'Quora-Formkey': conf.get('Quora-Formkey')
         }
         self.proxies = {
             'http': conf.get('proxy'),
             'https': conf.get('proxy'),
         }
+        self.headers['Quora-Formkey']=self.getFormkey()
+        self.ss=requests.session()
         self.bot = 'capybara'
         self.chat_id = self.load_chat_id_map()
         self.state='incomplete'
+
+    def getFormkey(self):
+        pattern=r'formkey": "(.*?)", "errorSamplingRate'
+        match = re.search(pattern,  requests.get('https://www.quora.com',headers=self.headers,proxies=self.proxies).text)
+        if match:
+            return match.group(1)
 
     def load_chat_id_map(self):
         data = {
@@ -53,9 +61,8 @@ class poeBot():
                 "withChatBreak": False
             }
         }
-        s = requests.session()
-        s.mount('https://', HTTPAdapter(max_retries=3))
-        rsp = s.request("POST",url=self.url, headers=self.headers, json=data, proxies=self.proxies,timeout=5)
+
+        _rspn = self.ss.request("POST",url=self.url, headers=self.headers, json=data, proxies=self.proxies,timeout=5)
         # logging.getLogger('log').debug(rsp.text)
 
     def clear_context(self):
@@ -66,7 +73,8 @@ class poeBot():
                 "chatId": self.chat_id
             }
         }
-        _ = requests.post(self.url, headers=self.headers, json=data, proxies=self.proxies)
+        self.ss.mount('https://', HTTPAdapter(max_retries=3))
+        _rspn = self.ss.request("POST",url=self.url, headers=self.headers, json=data, proxies=self.proxies,timeout=5)
 
     def get_latest_message(self):
         data = {
@@ -81,16 +89,16 @@ class poeBot():
         text=None
         while self.state == "incomplete":
             time.sleep(2)
-            response = requests.post(self.url, headers=self.headers, json=data, proxies=self.proxies,timeout=3)
-            response_json = response.json()
+            _rspn = self.ss.request("POST", url=self.url, headers=self.headers, json=data, proxies=self.proxies,
+                                    timeout=3)
+            response_json = _rspn.json()
             # logging.getLogger('itchat').info(response_json)
             text = response_json['data']['chatOfBot']['messagesConnection']['edges'][-1]['node']['text']
             self.state = response_json['data']['chatOfBot']['messagesConnection']['edges'][-1]['node']['state']
             logging.getLogger('itchat').debug(self.state)
         return text
 
-    def reply(self, message: str, context={}):
-        # logging.getLogger('itchat').info("[GPT]query={}, user_id={}".format(message, context.get('from_user_id')))
+    def reply(self, message: str, context=None):
         self.send_message(message)
         reply = self.get_latest_message()
         logging.getLogger('itchat').debug(f"{self.bot} : {reply}")

@@ -34,6 +34,12 @@ class weChat():
         # start message listener
         itchat.run()
 
+    def msg49(self,msg:dict):
+        if msg['FileName'] not in tl.posts.df.index:
+            df = pd.DataFrame(data=[[tl.dealWxUrl(msg['Url']), '']], index=[msg['FileName']],
+                              columns=['Url', 'Summary'])
+            tl.posts.df = tl.posts.df.append(df)
+            tl.posts.df.to_csv(tl.posts.filename, index_label='FileName')
 
     def handle(self, msg):
         tl.log.info(msg)
@@ -50,11 +56,8 @@ class weChat():
             prompt=''
             filename = ''
             if msg['MsgType'] == 49:
+                self.msg49(msg)
                 filename = msg['FileName']
-                if msg['FileName'] not in tl.posts.df.index:
-                    df = pd.DataFrame(data=[[msg['Url'], '']], index=[filename], columns=['Url', 'Summary'])
-                    tl.posts.df = tl.posts.df.append(df)
-                    tl.posts.update()
                 prompt = '总结要点，带序号:'
                 query = tl.ripPost(filename, tl.posts.df)
             elif '[Link]' in content or '[链接]' in content:
@@ -81,10 +84,8 @@ class weChat():
             return ""
         tl.log.debug(group_name)
         tl.log.debug(msg)
-        if msg['MsgType']==49 and msg['FileName'] not in tl.posts.df.index:
-            df=pd.DataFrame(data=[[tl.dealWxUrl(msg['Url']),'']],index=[msg['FileName']],columns=['Url','Summary'])
-            tl.posts.df=tl.posts.df.append(df)
-            tl.posts.update()
+        if msg['MsgType']==49:
+            self.msg49(msg)
             return
         if '[Message cannot be displayed]' in msg['Content']:
             query=tl.dealText(tl.ripBili(tl.posts.df[tl.posts.df['Url'].str.contains('23.tv')]['Url'].iloc[-1]))
@@ -125,6 +126,8 @@ class weChat():
             reply_text = self.chatBot.reply(queryText,context)
             if reply_text:
                 self.send(tl.conf.get("single_chat_reply_prefix") + reply_text, reply_user_id)
+                if title != '' and title in tl.posts.df.index and self.chatBot.state == 'complete':
+                    tl.posts.update(key=title,field= 'Summary',content=reply_text)
                 
         except Exception as e:
             tl.log.exception(e)
@@ -139,13 +142,12 @@ class weChat():
         context = dict()
         context['from_user_id'] = msg['ActualUserName']
         group_id = msg['User']['UserName']
-        query = tl.conf.get("character_desc", "") + prompt + '\n『%s』'%query
+        query = tl.conf.get('character_desc', '') + prompt + '\n『%s』'%query
         if len(prompt) < 4 or len(query) > 600:
             query = query + '\nTL;DR; Use Chinese.'
         reply_text = self.chatBot.reply(query, context)
         if reply_text:
-            reply_text = '@' + msg['ActualNickName'] + ' ' + reply_text.strip()
-            self.send(reply_text, group_id)
-            if title != '' and title in tl.posts.df.index:
-                tl.posts.df.at[title, 'Summary'] = reply_text
-                tl.posts.update()
+            self.send('@' + msg['ActualNickName'] + ' ' + reply_text.strip(), group_id)
+            if title != '' and title in tl.posts.df.index and self.chatBot.state=='complete':
+                tl.posts.update(key=title,field= 'Summary',content=reply_text)
+
