@@ -61,8 +61,8 @@ class poeBot():
                 "withChatBreak": False
             }
         }
-
         _rspn = self.ss.request("POST",url=self.url, headers=self.headers, json=data, proxies=self.proxies,timeout=5)
+        self.state = 'incomplete'
         # logging.getLogger('log').debug(rsp.text)
 
     def clear_context(self):
