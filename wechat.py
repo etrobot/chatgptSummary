@@ -42,7 +42,6 @@ class weChat():
             tl.posts.df.to_csv(tl.posts.filename, index_label='FileName')
 
     def handle(self, msg):
-        tl.log.info(msg)
         from_user_id = msg['FromUserName']
         to_user_id = msg['ToUserName']              # 接收人id
         other_user_id = msg['User']['UserName']     # 对手方id
@@ -80,8 +79,6 @@ class weChat():
         if not (group_name in tl.conf.get('group_name_white_list') or 'ALL_GROUP' in tl.conf.get(
                 'group_name_white_list')):
             return ""
-        tl.log.debug(group_name)
-        tl.log.debug(msg)
         if msg['MsgType']==49:
             self.msg49(msg)
             return
@@ -107,7 +104,6 @@ class weChat():
             tl.thread_pool.submit(self._do_send_group,query,msg,title,prompt)
 
     def send(self, msg, receiver):
-        # tl.log.info('[WX] sendMsg={}, receiver={}'.format(msg, receiver))
         itchat.send(msg, toUserName=receiver)
 
     def _do_send(self, query,reply_user_id,prompt,title):
@@ -124,8 +120,9 @@ class weChat():
             reply_text = self.chatBot.reply(queryText,context)
             if reply_text is not None:
                 self.send('[LLM]' + reply_text, reply_user_id)
-                if title != '' and title in tl.posts.df.index and self.chatBot.state == 'complete':
-                    tl.posts.update(key=title,field= 'Summary',content=reply_text)
+                if title != '' and title in tl.posts.df.index and self.chatBot.state == 'complete' and tl.is_contain_chinese(
+                        reply_text):
+                    tl.posts.update(key=title, field='Summary', content=reply_text)
                 
         except Exception as e:
             tl.log.exception(e)

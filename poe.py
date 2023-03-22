@@ -68,7 +68,6 @@ class poeBot():
         self.state = "incomplete"
         time.sleep(2)
         return self.get_latest_message()
-        # logging.getLogger('log').debug(rsp.text)
 
     def clear_context(self):
         data = {
@@ -107,7 +106,6 @@ class poeBot():
 
     def reply(self, message: str, context=None):
         replyText = self.send_message(message)
-        # logging.getLogger('itchat').debug(f"{self.bot} : {replyText}")
         if context is not None:
             with open('./user_session.json', 'w', encoding='utf-8') as f:
                 json.dump(context, f)
