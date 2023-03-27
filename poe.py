@@ -29,7 +29,7 @@ class poeBot():
         self.headers['Quora-Formkey']=self.getFormkey()
         self.ss=requests.session()
         self.bot = conf.get('llm','capybara')
-        self.chat_id = self.load_chat_id_map()
+        self.chat_id = None
         self.clear_context()
         self.state=None
 
@@ -65,9 +65,13 @@ class poeBot():
             }
         }
         _rspn = self.ss.request("POST",url=self.url, headers=self.headers, json=data, proxies=self.proxies,timeout=5)
+        if _rspn.status_code!=200:
+            return False
         self.state = "incomplete"
         time.sleep(2)
-        return self.get_latest_message()
+        if self.chat_id is None:
+            self.chat_id=self.load_chat_id_map()
+        return message
 
     def clear_context(self):
         data = {
@@ -80,7 +84,7 @@ class poeBot():
         self.ss.mount('https://', HTTPAdapter(max_retries=3))
         _rspn = self.ss.request("POST",url=self.url, headers=self.headers, json=data, proxies=self.proxies,timeout=5)
 
-    def get_latest_message(self):
+    def get_latest_message(self,message:str):
         data = {
             "operationName": "ChatPaginationQuery",
             "query": "query ChatPaginationQuery($bot: String!, $before: String, $last: Int! = 10) {\n  chatOfBot(bot: $bot) {\n    id\n    __typename\n    messagesConnection(before: $before, last: $last) {\n      __typename\n      pageInfo {\n        __typename\n        hasPreviousPage\n      }\n      edges {\n        __typename\n        node {\n          __typename\n          ...MessageFragment\n        }\n      }\n    }\n  }\n}\nfragment MessageFragment on Message {\n  id\n  __typename\n  messageId\n  text\n  linkifiedText\n  authorNickname\n  state\n  vote\n  voteReason\n  creationTime\n}",
@@ -98,15 +102,17 @@ class poeBot():
             # logging.getLogger('itchat').info(response_json)
             replyText = response_json['data']['chatOfBot']['messagesConnection']['edges'][-1]['node']['text']
             self.state = response_json['data']['chatOfBot']['messagesConnection']['edges'][-1]['node']['state']
-            if self.state == "complete":
+            if self.state == "complete" and replyText!=message:
                 return replyText
             logging.getLogger('itchat').debug(self.state)
             time.sleep(2)
         return replyText
 
     def reply(self, message: str, context=None):
-        replyText = self.send_message(message)
-        if context is not None:
-            with open('./user_session.json', 'w', encoding='utf-8') as f:
-                json.dump(context, f)
+        replyText=None
+        if self.send_message(message):
+            replyText = self.get_latest_message(message)
+            if context is not None :
+                with open('./user_session.json', 'w', encoding='utf-8') as f:
+                    json.dump(context, f)
         return replyText

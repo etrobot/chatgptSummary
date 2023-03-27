@@ -9,7 +9,7 @@ from itchat.content import *
 from poe import poeBot
 import pandas as pd
 import commonTools as tl
-
+from apscheduler.schedulers.blocking import BlockingScheduler
 
 @itchat.msg_register([TEXT,SHARING])
 def handler_single_msg(msg):
@@ -116,7 +116,7 @@ class weChat():
             if query!='':
                 queryText=queryText+'\n『%s\n』'%query
             if len(query)>1400 or '总结' in prompt:
-                queryText = queryText +'\nTL;DR; Summary in Chinese'
+                queryText = queryText +'\nTL;DR; Summarize then translate to Chinese'
             reply_text = self.chatBot.reply(queryText,context)
             if reply_text is not None:
                 self.send('[LLM]' + reply_text, reply_user_id)
@@ -139,7 +139,7 @@ class weChat():
         group_id = msg['User']['UserName']
         query = tl.conf.get('character_desc', '') + prompt + '\n『%s』'%query
         if len(prompt) < 4 or len(query) > 700:
-            query = query + '\nTL;DR; Summary in Chinese'
+            query = query + '\nTL;DR; Summarize then translate to Chinese'
         reply_text = self.chatBot.reply(query, context)
         if reply_text is not None:
             self.send('@' + msg['ActualNickName'] + ' ' + reply_text.strip(), group_id)
