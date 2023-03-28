@@ -29,7 +29,7 @@ class poeBot():
         self.headers['Quora-Formkey']=self.getFormkey()
         self.ss=requests.session()
         self.bot = conf.get('llm','capybara')
-        self.chat_id = None
+        self.chat_id = self.load_chat_id_map()
         self.clear_context()
         self.state=None
 
@@ -69,8 +69,6 @@ class poeBot():
             return False
         self.state = "incomplete"
         time.sleep(2)
-        if self.chat_id is None:
-            self.chat_id=self.load_chat_id_map()
         return message
 
     def clear_context(self):
@@ -102,7 +100,7 @@ class poeBot():
             # logging.getLogger('itchat').info(response_json)
             replyText = response_json['data']['chatOfBot']['messagesConnection']['edges'][-1]['node']['text']
             self.state = response_json['data']['chatOfBot']['messagesConnection']['edges'][-1]['node']['state']
-            if self.state == "complete" and replyText!=message:
+            if self.state == "complete" and replyText!= message:
                 return replyText
             logging.getLogger('itchat').debug(self.state)
             time.sleep(2)
