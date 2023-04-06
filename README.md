@@ -12,6 +12,6 @@
 
 API：
 
-[Poe](https://github.com/vaibhavk97/Poe)
+[Poe-API](https://github.com/ading2210/poe-api)
 
 说明：Poe是Quora推出的机器人，使用该api时需要查看Quora网站cookie中的m-b字段填到config.json中。
