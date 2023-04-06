@@ -121,7 +121,7 @@ class weChat():
                 reply_text=reply['text']
             if reply_text is not None:
                 self.send('[LLM]' + reply_text, reply_user_id)
-                if title != '' and title in tl.posts.df.index and self.chatBot.state == 'complete' and tl.is_contain_chinese(
+                if title != '' and title in tl.posts.df.index and tl.is_contain_chinese(
                         reply_text):
                     tl.posts.update(key=title, field='Summary', content=reply_text)
                 
@@ -146,6 +146,6 @@ class weChat():
             reply_text = reply['text']
         if reply_text is not None:
             self.send('@' + msg['ActualNickName'] + ' ' + reply_text.strip(), group_id)
-            if title != '' and title in tl.posts.df.index and self.chatBot.state=='complete' and tl.is_contain_chinese(reply_text):
+            if title != '' and title in tl.posts.df.index and tl.is_contain_chinese(reply_text):
                 tl.posts.update(key=title,field= 'Summary',content=reply_text)
 
