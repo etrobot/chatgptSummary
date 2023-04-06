@@ -17,7 +17,7 @@ class posts():
 
 class conf():
     def __init__(self):
-        with open('config.json') as fr:
+        with open('config.json','rb') as fr:
             self.conf = json.loads(fr.read())
 
     def get(self,key:str,default=None):
