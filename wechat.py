@@ -6,9 +6,9 @@ wechat channel
 
 import itchat
 from itchat.content import *
-import poe
 import pandas as pd
 import commonTools as tl
+from chatgptBot import ChatBot
 
 @itchat.msg_register([TEXT,SHARING])
 def handler_single_msg(msg):
@@ -24,7 +24,7 @@ def handler_group_msg(msg):
 
 class weChat():
     def __init__(self):
-        self.chatBot=poe.Client(tl.conf.get('Cookie'),proxy="http://127.0.0.1:7890")
+        self.chatBot=ChatBot()
         pass
 
     def startup(self):
@@ -45,8 +45,6 @@ class weChat():
         to_user_id = msg['ToUserName']              # 接收人id
         other_user_id = msg['User']['UserName']     # 对手方id
         content = msg['Text']
-        if content == "McDonald's ":
-            self.chatBot.send_chat_break(tl.conf.get('llm',default='a2'))
         quote='\n- - - - - - - - - - - - - - -\n'
         if from_user_id == other_user_id:
             match_prefix = tl.check_prefix(content, tl.conf.get('single_chat_prefix'))
@@ -116,9 +114,7 @@ class weChat():
                 queryText=queryText+'\n『%s\n』'%query
             if len(query)>1400 or '总结' in prompt:
                 queryText = queryText +'\nTL;DR; Summarize then translate to Chinese'
-            reply_text=''
-            for reply in self.chatBot.send_message(tl.conf.get('llm'), queryText):
-                reply_text=reply['text']
+            reply_text= self.chatBot.reply(queryText)
             if reply_text is not None:
                 self.send('[LLM]' + reply_text, reply_user_id)
                 if title != '' and title in tl.posts.df.index and tl.is_contain_chinese(
@@ -141,9 +137,7 @@ class weChat():
         query = tl.conf.get('character_desc', '') + prompt + '\n『%s』'%query
         if len(prompt) < 4 or len(query) > 700:
             query = query + '\nTL;DR; Summarize then translate to Chinese'
-        reply_text = ''
-        for reply in self.chatBot.send_message(tl.conf.get('llm'), query):
-            reply_text = reply['text']
+        reply_text= self.chatBot.reply(query)
         if reply_text is not None:
             self.send('@' + msg['ActualNickName'] + ' ' + reply_text.strip(), group_id)
             if title != '' and title in tl.posts.df.index and tl.is_contain_chinese(reply_text):

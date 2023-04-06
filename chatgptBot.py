@@ -1,62 +1,24 @@
+import commonTools as tl
+import os,logging,json
+from EdgeGPT import Chatbot, ConversationStyle
+import poe
+import asyncio
 
-import json
-import time
-
-import requests
-from revChatGPT.V1 import Chatbot
-'''
-注意！revChatGPT 会导致封号
-'''
-import logging
-
-user_session = dict()
-last_session_refresh = time.time()
-
-
-class ChatGPTBot():
-    def __init__(self,conf:dict):
-        config = {
-            "session_token":conf.get('sstoken'),
-        }
-        if conf.get('vika.cn'):
-            vikaUrl = 'https://api.vika.cn/fusion/v1/datasheets/dstMiuU9zzihy1LzFX/records?viewId=viwoAJhnS2NMT&fieldKey=name'
-            vikaCache = json.loads(requests.get(vikaUrl, headers={'Authorization': conf.get("vika.cn")}).text)['data'][
-                'records']
-            config["session_token"]=[x['fields']['value'] for x in vikaCache if x['recordId']=='recoeXAy2oY3E'][0]
-        if conf.get('proxy'):
-            config['proxy']=conf.get('proxy')
-        self.chatbot = Chatbot(config)
-
-    def reply(self, query, context=None):
-
-        from_user_id = context['from_user_id']
-        logging.getLogger('itchat').info("[GPT]query={}, user_id={}, session={}".format(query, from_user_id, user_session))
-
-        if from_user_id in user_session:
-            if time.time() - user_session[from_user_id]['last_reply_time'] < 60 * 5:
-                self.chatbot.conversation_id = user_session[from_user_id]['conversation_id']
-                self.chatbot.parent_id = user_session[from_user_id]['parent_id']
-            else:
-                self.chatbot.reset_chat()
+class ChatBot():
+    def __init__(self):
+        if os.path.isfile('./cookies.json'):
+            with open('./cookies.json', 'r') as f:
+                cookies = json.load(f)
+            self.bot = Chatbot(cookies=cookies,proxy=tl.conf.get('proxy'))
         else:
-            self.chatbot.reset_chat()
+            self.bot = poe.Client(tl.conf.get('Cookie'),proxy=tl.conf.get('proxy'))
 
-        logging.getLogger('log').info("[GPT]convId={}, parentId={}".format(self.chatbot.conversation_id, self.chatbot.parent_id))
-
-        try:
-            user_cache = dict()
-            for res in self.chatbot.ask(query):
-                user_cache=res
-                logMsg=res['message'].replace('\n\n','\n')
-                reply_rows=logMsg.split('\n')
-                if len(reply_rows)>1 and logMsg.endswith('\n'):
-                    logging.getLogger('log').info(reply_rows[-2])
-            logging.getLogger('log').debug("[GPT]userId={}, res={}".format(from_user_id, res))
-            user_cache['last_reply_time'] = time.time()
-            user_session[from_user_id] = user_cache
-            with open('./user_session.json', 'w', encoding='utf-8') as f:
-                json.dump(user_session, f)
-            return res['message']
-        except Exception as e:
-            logging.getLogger('itchat').exception(e)
-            return None
+    def reply(self, queryText):
+        reply_text = None
+        if hasattr(self.bot,'channel'):
+            for reply in self.bot.send_message(tl.conf.get('llm',default='a2'), queryText,with_chat_break=True):
+                reply_text = reply['text']
+        else:
+            reply = asyncio.run(self.bot.ask(prompt=queryText, conversation_style=ConversationStyle.creative, wss_link="wss://sydney.bing.com/sydney/ChatHub"))
+            reply_text=reply["item"]["messages"][1]["adaptiveCards"][0]["body"][0]["text"]
+        return reply_text
