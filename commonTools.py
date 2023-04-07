@@ -155,7 +155,7 @@ def is_contain_chinese(check_str):
     return False
 
 thread_pool = ThreadPoolExecutor(max_workers=8)
-log = logging.getLogger('itchat')
+log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 posts=posts()
 conf=conf()

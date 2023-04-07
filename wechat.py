@@ -8,7 +8,7 @@ import itchat
 from itchat.content import *
 import pandas as pd
 import commonTools as tl
-from chatgptBot import ChatBot
+from chatgptBot import Bing,Poe
 
 @itchat.msg_register([TEXT,SHARING])
 def handler_single_msg(msg):
@@ -24,7 +24,8 @@ def handler_group_msg(msg):
 
 class weChat():
     def __init__(self):
-        self.chatBot=ChatBot()
+        self.bingBot=Bing()
+        self.poeBot=Poe()
         pass
 
     def startup(self):
@@ -85,7 +86,7 @@ class weChat():
             return
 
         quote = '\n- - - - - - - - - - - - - - -\n'
-        if not msg['IsAt'] or not quote in msg['Content']:
+        if not msg['IsAt'] or not msg['Content'].startswith('@'):
             return
         content = msg['Content'].split(quote)
         name=msg['User']['Self']['DisplayName']
@@ -114,12 +115,14 @@ class weChat():
                 queryText=queryText+'\n『%s\n』'%query
             if len(query)>1400 or '总结' in prompt:
                 queryText = queryText +'\nTL;DR; Summarize then translate to Chinese'
-            reply_text= self.chatBot.reply(queryText)
+                reply_text= '[Poe]' + self.poeBot.reply(queryText)
+            else:
+                reply_text = '[Bing]' + self.bingBot.reply(queryText)
             if reply_text is not None:
-                self.send('[LLM]' + reply_text, reply_user_id)
+                self.send(reply_text, reply_user_id)
                 if title != '' and title in tl.posts.df.index and tl.is_contain_chinese(
-                        reply_text):
-                    tl.posts.update(key=title, field='Summary', content=reply_text)
+                        reply_text) and reply_text.startswith('[Poe]'):
+                    tl.posts.update(key=title, field='Summary', content=reply_text[len('[Poe]'):])
                 
         except Exception as e:
             tl.log.exception(e)
@@ -128,7 +131,7 @@ class weChat():
         if not query:
             return
         if title !='' and title in tl.posts.df.index and tl.posts.df.loc[title]['Summary'] != '' and ('总结' in prompt or prompt==''):
-            query = tl.posts.df.loc[title]['Summary'].split('[LLM]')[-1]
+            query = tl.posts.df.loc[title]['Summary']
             self.send(query, msg['User']['UserName'])
             return
         context = dict()
@@ -137,7 +140,9 @@ class weChat():
         query = tl.conf.get('character_desc', '') + prompt + '\n『%s』'%query
         if len(prompt) < 4 or len(query) > 700:
             query = query + '\nTL;DR; Summarize then translate to Chinese'
-        reply_text= self.chatBot.reply(query)
+            reply_text= self.poeBot.reply(query)
+        else:
+            reply_text = self.bingBot.reply(query)
         if reply_text is not None:
             self.send('@' + msg['ActualNickName'] + ' ' + reply_text.strip(), group_id)
             if title != '' and title in tl.posts.df.index and tl.is_contain_chinese(reply_text):
