@@ -1,4 +1,4 @@
-from wechat import *
+from wechat import weChat
 
 wechat = weChat()
 wechat.startup()

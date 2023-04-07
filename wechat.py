@@ -33,7 +33,7 @@ class weChat():
         if msg['FileName'] not in tl.posts.df.index:
             df = pd.DataFrame(data=[[tl.dealWxUrl(msg['Url']), '']], index=[msg['FileName']],
                               columns=['Url', 'Summary'])
-            tl.posts.df = tl.posts.df.append(df)
+            tl.posts.df = pd.concat([tl.posts.df,tl.posts.df.append(df)])
             tl.posts.df.to_csv(tl.posts.filename, index_label='FileName')
 
     def handle(self, msg):
