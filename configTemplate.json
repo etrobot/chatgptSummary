@@ -1,8 +1,8 @@
 {
   "proxy":"http://127.0.0.1:7890",
   "single_chat_prefix": ["Bot", "@Vega"],
-  "single_chat_reply_prefix": "[ChatGPT] ",
   "group_name_white_list": ["AI 应用研讨群","猴塞雷666","产品小分队"],
   "mp.weixin.qq.com": "js_content",
-  "Cookie":"4Ke40CvPCnxusgw"
+  "llm": "a2",
+  "Cookie":""
 }
