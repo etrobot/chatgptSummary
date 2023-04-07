@@ -1,9 +1,4 @@
 # encoding:utf-8
-
-"""
-wechat channel
-"""
-
 import itchat
 from itchat.content import *
 import pandas as pd
