@@ -27,7 +27,7 @@ def check_prefix(content:str, prefix_list):
     for prefix in prefix_list:
         if content.startswith(prefix):
             return prefix
-    return ''
+    return None
 def extractWxTitle(txt):
     pattern = r'\[Link\]\s+(.*?)"\n- - - - - - - - - - - - - - -\n'
     if '[链接]' in txt:

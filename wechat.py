@@ -33,7 +33,7 @@ class weChat():
         if msg['FileName'] not in tl.posts.df.index:
             df = pd.DataFrame(data=[[tl.dealWxUrl(msg['Url']), '']], index=[msg['FileName']],
                               columns=['Url', 'Summary'])
-            tl.posts.df = pd.concat([tl.posts.df,tl.posts.df.append(df)])
+            tl.posts.df = pd.concat([tl.posts.df,df])
             tl.posts.df.to_csv(tl.posts.filename, index_label='FileName')
 
     def handle(self, msg):
@@ -44,6 +44,8 @@ class weChat():
         quote='\n- - - - - - - - - - - - - - -\n'
         if from_user_id == other_user_id:
             match_prefix = tl.check_prefix(content, tl.conf.get('single_chat_prefix'))
+            if match_prefix:
+                content=content[len(match_prefix):]
             query=''
             prompt=''
             filename = ''
@@ -54,14 +56,14 @@ class weChat():
                 query = tl.ripPost(filename, tl.posts.df)
             elif '[Link]' in content or '[链接]' in content:
                 filename = tl.extractWxTitle(content)
-                prompt = content.split(quote)[-1][len(match_prefix):]
+                prompt = content.split(quote)[-1]
                 query=tl.ripPost(filename,tl.posts.df)
             elif quote in content :
                 querys=content.split(quote)
                 query=querys[0]
                 prompt=querys[1]
-            elif match_prefix != '':
-                prompt = content[len(match_prefix):]
+            elif match_prefix is not None:
+                prompt = content
             tl.thread_pool.submit(self._do_send, query,from_user_id,prompt,filename)
 
 
@@ -108,7 +110,7 @@ class weChat():
             queryText = tl.conf.get("character_desc", "") + prompt
             if query!='':
                 queryText=queryText+'\n『%s\n』'%query
-            if len(query)>1400 or '总结' in prompt:
+            if len(query)>1400 or '总结' in prompt and 'http' not in prompt:
                 queryText = queryText +'\nTL;DR; Summarize then translate to Chinese'
                 reply_text= '[Poe]' + self.poeBot.reply(queryText)
             else:
