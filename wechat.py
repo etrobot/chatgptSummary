@@ -83,7 +83,7 @@ class weChat():
             return
 
         quote = '\n- - - - - - - - - - - - - - -\n'
-        if not msg['IsAt'] or not msg['Content'].startswith('@'):
+        if not msg['IsAt']:
             return
         content = msg['Content'].split(quote)
         name=msg['User']['Self']['DisplayName']

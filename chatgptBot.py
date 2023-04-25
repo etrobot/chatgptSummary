@@ -1,5 +1,5 @@
 import commonTools as tl
-import json
+import json,re
 from EdgeGPT import Chatbot, ConversationStyle
 import poe
 import asyncio
@@ -15,6 +15,7 @@ class Bing():
         reply = asyncio.run(self.bot.ask(prompt=querytext, conversation_style=ConversationStyle.creative, wss_link="wss://sydney.bing.com/sydney/ChatHub"))
         if reply:
             reply_text=reply["item"]["messages"][1]["adaptiveCards"][0]["body"][0]["text"]
+            reply_text=re.sub(r'\[\^[0-9]+\^\]', '', reply_text)
         return reply_text
 
 class Poe():
