@@ -6,9 +6,7 @@ import asyncio
 
 class Bing():
     def __init__(self):
-        with open('./cookies.json', 'r') as f:
-            cookies = json.load(f)
-        self.bot = Chatbot(cookies=cookies,proxy=tl.conf.get('proxy'))
+        self.bot = asyncio.run(Chatbot.create(cookie_path='./cookies.json',proxy=tl.conf.get('proxy')))
 
     def reply(self, querytext:str):
         reply_text=None
