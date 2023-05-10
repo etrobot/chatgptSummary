@@ -12,7 +12,7 @@ class Bing():
 
     def reply(self, querytext:str):
         reply_text=None
-        reply = asyncio.run(self.bot.ask(prompt=querytext, conversation_style=ConversationStyle.creative, wss_link="wss://sydney.bing.com/sydney/ChatHub"))
+        reply = asyncio.run(self.bot.ask(prompt=querytext, conversation_style=ConversationStyle.precise, wss_link="wss://sydney.bing.com/sydney/ChatHub"))
         if reply:
             reply_text=reply["item"]["messages"][1]["adaptiveCards"][0]["body"][0]["text"]
             reply_text=re.sub(r'\[\^[0-9]+\^\]', '', reply_text)
