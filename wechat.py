@@ -53,11 +53,11 @@ class weChat():
                 self.msg49(msg)
                 filename = msg['FileName']
                 prompt = '用中文总结要点，带序号:'
-                query = tl.ripPost(filename, tl.posts.df)
+                query = tl.ripPost(filename, tl.posts.df,tl.conf.get('llm'))
             elif '[Link]' in content or '[链接]' in content:
                 filename = tl.extractWxTitle(content)
                 prompt = content.split(quote)[-1]
-                query=tl.ripPost(filename,tl.posts.df)
+                query= tl.ripPost(filename, tl.posts.df,tl.conf.get('llm'))
             elif quote in content :
                 querys=content.split(quote)
                 query=querys[0]
@@ -94,7 +94,7 @@ class weChat():
         title=''
         if '[Link]' in msg['Content'] or '[链接]' in msg['Content']:
             title = tl.extractWxTitle(msg['Content'])
-            query= tl.ripPost(title,tl.posts.df)
+            query= tl.ripPost(title,tl.posts.df,tl.conf.get('llm'))
         if query is not None:
             tl.thread_pool.submit(self._do_send_group,query,msg,title,prompt)
 
@@ -111,7 +111,7 @@ class weChat():
             if query!='':
                 queryText=queryText+'\n『%s\n』'%query
             if len(query)>1400 or '总结' in prompt and 'http' not in prompt:
-                queryText = queryText +'\nTL;DR; Summarize then translate to Chinese'
+                queryText = queryText +'\nTL;DR; reply in Chinese.'
                 reply_text= '[Poe]' + self.poeBot.reply(queryText)
             else:
                 reply_text = '[Bing]' + self.bingBot.reply(queryText)
@@ -136,7 +136,7 @@ class weChat():
         group_id = msg['User']['UserName']
         query = tl.conf.get('character_desc', '') + prompt + '\n『%s』'%query
         if len(prompt) < 4 or len(query) > 700:
-            query = query + '\nTL;DR; Summarize then translate to Chinese'
+            query = query + '\nTL;DR; reply in Chinese.'
             reply_text= self.poeBot.reply(query)
         else:
             reply_text = self.bingBot.reply(query)

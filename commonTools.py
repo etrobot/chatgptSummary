@@ -51,7 +51,7 @@ def dealWxUrl(rawurl:str):
     )
     return realurl
 
-def ripPost(filename,posts):
+def ripPost(filename,posts,llm=None):
     row = posts.loc[filename]
     res = requests.get(row['Url'])
     if '23.tv' in row['Url']:
@@ -78,8 +78,9 @@ def ripPost(filename,posts):
             query.sort(key=query1.index)
             queryText = '《%s》'%filename+'\n'.join(query)
 
-    return dealText(queryText)
-
+    if llm=='a2':
+        return dealText(queryText)
+    return queryText
 
 def dealText(queryText:str):
     if len(queryText) <= 1800:
