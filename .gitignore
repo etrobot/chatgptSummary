@@ -129,8 +129,5 @@ dmypy.json
 .pyre/
 
 # for this project
-config.json
 QR.png
 itchat.pkl
-user_session.json
-cookies.json

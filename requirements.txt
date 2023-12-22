@@ -2,5 +2,5 @@ beautifulsoup4
 itchat-uos==1.5.0.dev0
 pandas
 requests
-poe-api
-EdgeGPT
+litellm
+python-dotenv

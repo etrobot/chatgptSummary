@@ -3,7 +3,10 @@ import itchat
 from itchat.content import *
 import pandas as pd
 import commonTools as tl
-from chatgptBot import Bing,Poe
+from litellm import completion
+import os
+from dotenv import load_dotenv,find_dotenv
+load_dotenv(find_dotenv())
 
 @itchat.msg_register([TEXT,SHARING])
 def handler_single_msg(msg):
@@ -19,8 +22,6 @@ def handler_group_msg(msg):
 
 class weChat():
     def __init__(self):
-        self.bingBot=Bing()
-        self.poeBot=Poe()
         pass
 
     def startup(self):
@@ -43,7 +44,7 @@ class weChat():
         content = msg['Text']
         quote='\n- - - - - - - - - - - - - - -\n'
         if from_user_id == other_user_id:
-            match_prefix = tl.check_prefix(content, tl.conf.get('single_chat_prefix'))
+            match_prefix = tl.check_prefix(content)
             if match_prefix:
                 content=content[len(match_prefix):]
             query=''
@@ -53,11 +54,11 @@ class weChat():
                 self.msg49(msg)
                 filename = msg['FileName']
                 prompt = '用中文总结要点，带序号:'
-                query = tl.ripPost(filename, tl.posts.df,tl.conf.get('llm'))
+                query = tl.ripPost(filename, tl.posts.df)
             elif '[Link]' in content or '[链接]' in content:
                 filename = tl.extractWxTitle(content)
                 prompt = content.split(quote)[-1]
-                query= tl.ripPost(filename, tl.posts.df,tl.conf.get('llm'))
+                query= tl.ripPost(filename, tl.posts.df)
             elif quote in content :
                 querys=content.split(quote)
                 query=querys[0]
@@ -94,7 +95,7 @@ class weChat():
         title=''
         if '[Link]' in msg['Content'] or '[链接]' in msg['Content']:
             title = tl.extractWxTitle(msg['Content'])
-            query= tl.ripPost(title,tl.posts.df,tl.conf.get('llm'))
+            query= tl.ripPost(title,tl.posts.df)
         if query is not None:
             tl.thread_pool.submit(self._do_send_group,query,msg,title,prompt)
 
@@ -110,11 +111,11 @@ class weChat():
             queryText = tl.conf.get("character_desc", "") + prompt
             if query!='':
                 queryText=queryText+'\n『%s\n』'%query
-            if len(query)>1400 or '总结' in prompt and 'http' not in prompt:
-                queryText = queryText +'\nTL;DR; reply in Chinese.'
-                reply_text= '[Poe]' + self.poeBot.reply(queryText)
-            else:
-                reply_text = '[Bing]' + self.bingBot.reply(queryText)
+            queryText = queryText +'\nTL;DR; reply in Chinese.'
+            reply_text= '[GPT]' + completion(model=tl.conf.get("model", ""), messages=[{
+    "role": "user",
+    "content": queryText,
+}], api_key=os.environ['API_KEY'],api_base=os.environ['API_BASE_URL'])["choices"][0]["message"]["content"]
             if reply_text is not None:
                 self.send(reply_text, reply_user_id)
                 if title != '' and title in tl.posts.df.index and tl.is_contain_chinese(
@@ -134,12 +135,11 @@ class weChat():
         context = dict()
         context['from_user_id'] = msg['ActualUserName']
         group_id = msg['User']['UserName']
-        query = tl.conf.get('character_desc', '') + prompt + '\n『%s』'%query
-        if len(prompt) < 4 or len(query) > 700:
-            query = query + '\nTL;DR; reply in Chinese.'
-            reply_text= self.poeBot.reply(query)
-        else:
-            reply_text = self.bingBot.reply(query)
+        query = prompt + '\n『%s』'%query
+        reply_text = completion(model=tl.conf.get("model", ""), messages=[{
+    "role": "user",
+    "content": query,
+}], api_key=os.environ['API_KEY'],api_base=os.environ['API_BASE_URL'])["choices"][0]["message"]["content"]
         if reply_text is not None:
             self.send('@' + msg['ActualNickName'] + ' ' + reply_text.strip(), group_id)
             if title != '' and title in tl.posts.df.index and tl.is_contain_chinese(reply_text):

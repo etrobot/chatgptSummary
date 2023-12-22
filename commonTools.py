@@ -51,7 +51,7 @@ def dealWxUrl(rawurl:str):
     )
     return realurl
 
-def ripPost(filename,posts,llm=None):
+def ripPost(filename,posts):
     row = posts.loc[filename]
     res = requests.get(row['Url'])
     if '23.tv' in row['Url']:
@@ -78,8 +78,6 @@ def ripPost(filename,posts,llm=None):
             query.sort(key=query1.index)
             queryText = '《%s》'%filename+'\n'.join(query)
 
-    if llm=='a2':
-        return dealText(queryText)
     return queryText
 
 def dealText(queryText:str):
@@ -98,10 +96,10 @@ def dealText(queryText:str):
 
     keyPoints = [x for x in query if len(x) >= 2 and checkIndex(x)]
     keyPointsLen = len('\n'.join(keyPoints))
-    query1 = queryText[:840 - int(keyPointsLen / 2)].split('\n')[:-1]
+    query1 = queryText[:3500 - int(keyPointsLen / 2)].split('\n')[:-1]
     query1.extend(keyPoints)
-    query1 = [x for x in query1 if x not in queryText[-1200 + int(keyPointsLen / 2):]]
-    query1.extend(queryText[-1000 + int(keyPointsLen / 2):].split('\n')[1:])
+    query1 = [x for x in query1 if x not in queryText[-3500 + int(keyPointsLen / 2):]]
+    query1.extend(queryText[-3500 + int(keyPointsLen / 2):].split('\n')[1:])
     query1 = [x.strip() for x in query1 if len(x.strip()) >= 2]
     query = list(set(query1))
     query.sort(key=query1.index)

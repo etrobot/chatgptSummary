@@ -1,0 +1,3 @@
+[submodule "PoeAPI"]
+	path = PoeAPI
+	url = https://github.com/aspekts/PoeAPI
