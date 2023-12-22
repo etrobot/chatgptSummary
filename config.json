@@ -1,0 +1,8 @@
+{
+  "proxy":"http://127.0.0.1:7890",
+  "single_chat_prefix": ["Bot", "@Vega"],
+  "single_chat_reply_prefix": "[ChatGPT] ",
+  "group_name_white_list": ["AI 应用研讨群","\uD83E\uDDE1 \uD83C\uDF84即刻Coze\uD83C\uDF84 \uD83E\uDDE1"],
+  "mp.weixin.qq.com": "js_content",
+  "model": "openai/gpt-3.5-turbo-1106"
+}
