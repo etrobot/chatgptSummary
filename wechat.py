@@ -44,7 +44,7 @@ class weChat():
         content = msg['Text']
         quote='\n- - - - - - - - - - - - - - -\n'
         if from_user_id == other_user_id:
-            match_prefix = tl.check_prefix(content)
+            match_prefix = tl.check_prefix(content,tl.conf.get('single_chat_prefix'))
             if match_prefix:
                 content=content[len(match_prefix):]
             query=''
