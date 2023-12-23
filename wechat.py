@@ -1,4 +1,6 @@
 # encoding:utf-8
+import logging
+
 import itchat
 from itchat.content import *
 import pandas as pd
@@ -128,10 +130,13 @@ class weChat():
     def _do_send_group(self,query,msg,title,prompt):
         if not query:
             return
-        if title !='' and title in tl.posts.df.index and tl.posts.df.loc[title]['Summary'] != '' and ('总结' in prompt or prompt==''):
-            query = tl.posts.df.loc[title]['Summary']
-            self.send(query, msg['User']['UserName'])
-            return
+        try:
+            queryDF = tl.posts.df.loc[title]['Summary']
+            if len(queryDF)>300:
+                self.send(queryDF, msg['User']['UserName'])
+                return
+        except Exception as e:
+            logging.error(e)
         context = dict()
         context['from_user_id'] = msg['ActualUserName']
         group_id = msg['User']['UserName']
