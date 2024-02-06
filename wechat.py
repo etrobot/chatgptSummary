@@ -5,11 +5,15 @@ import itchat
 from itchat.content import *
 import pandas as pd
 import commonTools as tl
-from litellm import completion
 import os
+from openai import OpenAI
 from dotenv import load_dotenv,find_dotenv
 load_dotenv(find_dotenv())
 
+client = OpenAI(
+    api_key= os.environ["API_KEY"],
+    base_url=os.environ["API_BASE_URL"],
+)
 @itchat.msg_register([TEXT,SHARING])
 def handler_single_msg(msg):
     weChat().handle(msg)
@@ -114,10 +118,15 @@ class weChat():
             if query!='':
                 queryText=queryText+'\n『%s\n』'%query
             queryText = queryText +'\nTL;DR; reply in Chinese.'
-            reply_text= '[GPT]' + completion(model=tl.conf.get("model", ""), messages=[{
-    "role": "user",
-    "content": queryText,
-}], api_key=os.environ['API_KEY'],api_base=os.environ['API_BASE_URL'])["choices"][0]["message"]["content"]
+            completion = client.chat.completions.create(
+              model=tl.conf.get("model"),
+              messages=[
+                # {"role": "system", "content": "你是Moonshot AI研发的智能助理kimi"},
+                {"role": "user", "content": queryText}
+              ],
+              temperature=0.7,
+            )
+            reply_text= tl.conf.get('single_chat_reply_prefix') + completion.choices[0].message.content
             if reply_text is not None:
                 self.send(reply_text, reply_user_id)
                 if title != '' and title in tl.posts.df.index and tl.is_contain_chinese(
@@ -141,10 +150,16 @@ class weChat():
         context['from_user_id'] = msg['ActualUserName']
         group_id = msg['User']['UserName']
         query = prompt + '\n『%s』'%query
-        reply_text = completion(model=tl.conf.get("model", ""), messages=[{
-    "role": "user",
-    "content": query,
-}], api_key=os.environ['API_KEY'],api_base=os.environ['API_BASE_URL'])["choices"][0]["message"]["content"]
+        completion = client.chat.completions.create(
+              model=tl.conf.get("model", ""),
+              messages=[
+                # {"role": "system", "content": "你是Moonshot AI研发的智能助理kimi"},
+                {"role": "user", "content": query}
+              ],
+              temperature=0.7,
+            )
+
+        reply_text = completion.choices[0].message.content
         if reply_text is not None:
             self.send('@' + msg['ActualNickName'] + ' ' + reply_text.strip(), group_id)
             if title != '' and title in tl.posts.df.index and tl.is_contain_chinese(reply_text):
