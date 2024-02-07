@@ -4,16 +4,20 @@
 
 ![](https://pic3.zhimg.com/80/v2-bf76c399defe2c82d3ac4d61b8962b4e_720w.webp)
 
-参考项目：
-
-[BiliGPT 哔哩哔哩 · 视频内容一键总结 b.jimmylv.cn](https://github.com/JimmyLv/BiliGPT)
+### 参考项目：
 
 [chatgpt-on-wechat](https://github.com/zhayujie/chatgpt-on-wechat)
 
-API：
+### 使用说明：
 
-[EdgeGPT](https://github.com/acheong08/EdgeGPT)
+先安装需要的运行库pip install -r requirements.txt
 
-[Poe-API](https://github.com/ading2210/poe-api)
+在项目根目录新建文本文件命名为『.env』，填入：
 
-说明：Poe是Quora推出的机器人，使用该api时需要查看Quora网站cookie中的m-b字段填到config.json中。
+API_KEY="你的apikey"
+
+API_BASE_URL="你的base url"
+
+运行wechat.py即可
+
+
